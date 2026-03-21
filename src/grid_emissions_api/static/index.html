@@ -818,24 +818,28 @@ async function loadLive() {
     COUNTRIES.map(c => fetch('/v1/intensity/latest?country=' + c).then(r => r.json()))
   );
 
-  let any = false;
+  const entries = [];
   results.forEach((res, i) => {
     if (res.status !== 'fulfilled') return;
     const pt = res.value.data?.[0];
     if (!pt) return;
-    any = true;
+    entries.push({ country: COUNTRIES[i], pt });
+  });
+  entries.sort((a, b) => a.pt.intensity - b.pt.intensity);
+
+  entries.forEach(({ country, pt }) => {
     const band = pt.intensity < 100 ? 'low' : pt.intensity < 300 ? 'mid' : 'high';
     const card = document.createElement('div');
     card.className = 'country-card ' + band;
-    card.dataset.country = COUNTRIES[i];
+    card.dataset.country = country;
     card.style.cursor = 'pointer';
-    card.addEventListener('click', () => selectCountry(COUNTRIES[i]));
+    card.addEventListener('click', () => selectCountry(country));
     card.innerHTML = `
       <div class="cc-header">
-        <span class="cc-flag">${FLAGS[COUNTRIES[i]]}</span>
-        <span class="cc-code">${COUNTRIES[i]}</span>
+        <span class="cc-flag">${FLAGS[country]}</span>
+        <span class="cc-code">${country}</span>
       </div>
-      <div class="cc-name">${NAMES[COUNTRIES[i]]}</div>
+      <div class="cc-name">${NAMES[country]}</div>
       <div class="cc-intensity ${intensityClass(pt.intensity)}">
         ${Math.round(pt.intensity)}
         <span class="cc-unit">gCO₂eq/kWh</span>
@@ -844,6 +848,8 @@ async function loadLive() {
     `;
     grid.appendChild(card);
   });
+
+  const any = entries.length > 0;
 
   if (!any) {
     grid.innerHTML = '<p style="grid-column:1/-1;color:var(--text-muted);font-family:var(--font-code);font-size:13px;text-align:center;padding:24px">No live data available — ingest data first</p>';
