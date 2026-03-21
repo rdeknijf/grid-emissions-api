@@ -321,7 +321,7 @@ nav .container {
 
 .live-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
 }
 
@@ -575,8 +575,8 @@ footer {
 <div class="container reveal" style="animation-delay:0.08s">
   <div class="stats">
     <div class="stat">
-      <div class="stat-value">5</div>
-      <div class="stat-label">Countries</div>
+      <div class="stat-value">27</div>
+      <div class="stat-label">EU Countries</div>
     </div>
     <div class="stat">
       <div class="stat-value">Hourly</div>
@@ -709,9 +709,24 @@ footer {
 </footer>
 
 <script>
-const FLAGS = { NL: '🇳🇱', DE: '🇩🇪', FR: '🇫🇷', BE: '🇧🇪', DK1: '🇩🇰', DK2: '🇩🇰' };
-const NAMES = { NL: 'Netherlands', DE: 'Germany', FR: 'France', BE: 'Belgium', DK1: 'Denmark West', DK2: 'Denmark East' };
-const COUNTRIES = ['NL', 'DE', 'FR', 'BE', 'DK1', 'DK2'];
+const FLAGS = {
+  AT: '🇦🇹', BE: '🇧🇪', BG: '🇧🇬', HR: '🇭🇷', CY: '🇨🇾', CZ: '🇨🇿',
+  DK1: '🇩🇰', DK2: '🇩🇰', EE: '🇪🇪', FI: '🇫🇮', FR: '🇫🇷', DE: '🇩🇪',
+  GR: '🇬🇷', HU: '🇭🇺', IE: '🇮🇪', IT: '🇮🇹', LV: '🇱🇻', LT: '🇱🇹',
+  LU: '🇱🇺', MT: '🇲🇹', NL: '🇳🇱', PL: '🇵🇱', PT: '🇵🇹', RO: '🇷🇴',
+  SK: '🇸🇰', SI: '🇸🇮', ES: '🇪🇸',
+  SE1: '🇸🇪', SE2: '🇸🇪', SE3: '🇸🇪', SE4: '🇸🇪'
+};
+const NAMES = {
+  AT: 'Austria', BE: 'Belgium', BG: 'Bulgaria', HR: 'Croatia', CY: 'Cyprus',
+  CZ: 'Czech Republic', DK1: 'Denmark West', DK2: 'Denmark East', EE: 'Estonia',
+  FI: 'Finland', FR: 'France', DE: 'Germany', GR: 'Greece', HU: 'Hungary',
+  IE: 'Ireland', IT: 'Italy', LV: 'Latvia', LT: 'Lithuania', LU: 'Luxembourg',
+  MT: 'Malta', NL: 'Netherlands', PL: 'Poland', PT: 'Portugal', RO: 'Romania',
+  SK: 'Slovakia', SI: 'Slovenia', ES: 'Spain',
+  SE1: 'Sweden North', SE2: 'Sweden C-North', SE3: 'Sweden C-South', SE4: 'Sweden South'
+};
+const COUNTRIES = Object.keys(FLAGS);
 
 const code = {
   curl: `<span class="cmt"># Get latest intensity for the Netherlands</span>

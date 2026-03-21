@@ -84,7 +84,9 @@ async def list_countries():
 
 @app.get("/v1/intensity", response_model=IntensityResponse)
 async def get_intensity(
-    country: str = Query(..., description="Country code (NL, DE, FR, BE, DK1, DK2)"),
+    country: str = Query(
+        ..., description="ISO country code or bidding zone (e.g. NL, DE, FR, SE1)"
+    ),
     start: datetime = Query(..., description="Start time (UTC, ISO 8601)"),
     end: datetime = Query(..., description="End time (UTC, ISO 8601)"),
 ):
@@ -114,7 +116,9 @@ async def get_intensity(
 
 @app.get("/v1/intensity/latest", response_model=IntensityResponse)
 async def get_latest_intensity(
-    country: str = Query(..., description="Country code (NL, DE, FR, BE, DK1, DK2)"),
+    country: str = Query(
+        ..., description="ISO country code or bidding zone (e.g. NL, DE, FR, SE1)"
+    ),
 ):
     """Get the most recent emissions intensity for a country."""
     country = _validate_country(country)

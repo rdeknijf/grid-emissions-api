@@ -48,12 +48,42 @@ def test_list_countries(client):
     assert resp.status_code == 200
     data = resp.json()
     codes = [c["code"] for c in data["countries"]]
-    assert "NL" in codes
-    assert "DE" in codes
-    assert "FR" in codes
-    assert "BE" in codes
-    assert "DK1" in codes
-    assert "DK2" in codes
+    # All 27 EU countries (31 zones incl. DK1/DK2, SE1-SE4)
+    for code in [
+        "NL",
+        "DE",
+        "FR",
+        "BE",
+        "DK1",
+        "DK2",
+        "AT",
+        "ES",
+        "IT",
+        "PL",
+        "SE1",
+        "SE2",
+        "SE3",
+        "SE4",
+        "CZ",
+        "GR",
+        "PT",
+        "RO",
+        "FI",
+        "HU",
+        "IE",
+        "BG",
+        "HR",
+        "EE",
+        "LV",
+        "LT",
+        "SK",
+        "SI",
+        "CY",
+        "LU",
+        "MT",
+    ]:
+        assert code in codes, f"{code} missing from /v1/countries"
+    assert len(codes) == 31
 
 
 def test_list_countries_has_bidding_zones(client):

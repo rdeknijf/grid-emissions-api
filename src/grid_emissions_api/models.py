@@ -3,39 +3,42 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
-# -- Bidding zones for MVP countries --
+# -- ENTSO-E bidding zones for all EU-27 countries --
 
 BIDDING_ZONES: dict[str, dict] = {
-    "NL": {
-        "name": "Netherlands",
-        "zone": "NL",
-        "code": "10YNL----------L",
-    },
-    "DE": {
-        "name": "Germany-Luxembourg",
-        "zone": "DE-LU",
-        "code": "10Y1001A1001A82H",
-    },
-    "FR": {
-        "name": "France",
-        "zone": "FR",
-        "code": "10YFR-RTE------C",
-    },
-    "BE": {
-        "name": "Belgium",
-        "zone": "BE",
-        "code": "10YBE----------2",
-    },
-    "DK1": {
-        "name": "Denmark West",
-        "zone": "DK1",
-        "code": "10YDK-1--------W",
-    },
-    "DK2": {
-        "name": "Denmark East",
-        "zone": "DK2",
-        "code": "10YDK-2--------M",
-    },
+    # Single-zone countries
+    "AT": {"name": "Austria", "zone": "AT", "code": "10YAT-APG------L"},
+    "BE": {"name": "Belgium", "zone": "BE", "code": "10YBE----------2"},
+    "BG": {"name": "Bulgaria", "zone": "BG", "code": "10YCA-BULGARIA-R"},
+    "HR": {"name": "Croatia", "zone": "HR", "code": "10YHR-HEP------M"},
+    "CY": {"name": "Cyprus", "zone": "CY", "code": "10YCY-1001A0003J"},
+    "CZ": {"name": "Czech Republic", "zone": "CZ", "code": "10YCZ-CEPS-----N"},
+    "EE": {"name": "Estonia", "zone": "EE", "code": "10Y1001A1001A39I"},
+    "FI": {"name": "Finland", "zone": "FI", "code": "10YFI-1--------U"},
+    "FR": {"name": "France", "zone": "FR", "code": "10YFR-RTE------C"},
+    "DE": {"name": "Germany-Luxembourg", "zone": "DE-LU", "code": "10Y1001A1001A82H"},
+    "GR": {"name": "Greece", "zone": "GR", "code": "10YGR-HTSO-----Y"},
+    "HU": {"name": "Hungary", "zone": "HU", "code": "10YHU-MAVIR----U"},
+    "IE": {"name": "Ireland", "zone": "IE-SEM", "code": "10Y1001A1001A59C"},
+    "IT": {"name": "Italy", "zone": "IT", "code": "10YIT-GRTN-----B"},
+    "LV": {"name": "Latvia", "zone": "LV", "code": "10YLV-1001A00074"},
+    "LT": {"name": "Lithuania", "zone": "LT", "code": "10YLT-1001A0008Q"},
+    "LU": {"name": "Luxembourg", "zone": "LU", "code": "10YLU-CEGEDEL-NQ"},
+    "MT": {"name": "Malta", "zone": "MT", "code": "10Y1001A1001A93C"},
+    "NL": {"name": "Netherlands", "zone": "NL", "code": "10YNL----------L"},
+    "PL": {"name": "Poland", "zone": "PL", "code": "10YPL-AREA-----S"},
+    "PT": {"name": "Portugal", "zone": "PT", "code": "10YPT-REN------W"},
+    "RO": {"name": "Romania", "zone": "RO", "code": "10YRO-TEL------P"},
+    "SK": {"name": "Slovakia", "zone": "SK", "code": "10YSK-SEPS-----K"},
+    "SI": {"name": "Slovenia", "zone": "SI", "code": "10YSI-ELES-----O"},
+    "ES": {"name": "Spain", "zone": "ES", "code": "10YES-REE------0"},
+    # Multi-zone countries
+    "DK1": {"name": "Denmark West", "zone": "DK1", "code": "10YDK-1--------W"},
+    "DK2": {"name": "Denmark East", "zone": "DK2", "code": "10YDK-2--------M"},
+    "SE1": {"name": "Sweden North", "zone": "SE1", "code": "10Y1001A1001A44P"},
+    "SE2": {"name": "Sweden Central-North", "zone": "SE2", "code": "10Y1001A1001A45N"},
+    "SE3": {"name": "Sweden Central-South", "zone": "SE3", "code": "10Y1001A1001A46L"},
+    "SE4": {"name": "Sweden South", "zone": "SE4", "code": "10Y1001A1001A47J"},
 }
 
 # -- IPCC AR6 lifecycle emission factors (gCO2eq/kWh) per ENTSO-E PSR code --
