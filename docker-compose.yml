@@ -1,0 +1,22 @@
+services:
+  api:
+    build: .
+    container_name: grid-emissions
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - DATABASE_PATH=/data/emissions.db
+    volumes:
+      - ./data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grid-emissions.rule=Host(`grid.deknijf.com`)"
+      - "traefik.http.routers.grid-emissions.entrypoints=web"
+      - "traefik.http.services.grid-emissions.loadbalancer.server.port=8000"
+      - "traefik.docker.network=proxy"
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true

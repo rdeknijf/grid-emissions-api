@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GL_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">
+    <mRID>SAMPLE_DOC_001</mRID>
+    <revisionNumber>1</revisionNumber>
+    <type>A75</type>
+    <process.processType>A16</process.processType>
+    <sender_MarketParticipant.mRID codingScheme="A01">10X1001A1001A450</sender_MarketParticipant.mRID>
+    <sender_MarketParticipant.marketRole.type>A32</sender_MarketParticipant.marketRole.type>
+    <receiver_MarketParticipant.mRID codingScheme="A01">10X1001A1001A450</receiver_MarketParticipant.mRID>
+    <receiver_MarketParticipant.marketRole.type>A33</receiver_MarketParticipant.marketRole.type>
+    <createdDateTime>2026-03-19T10:00:00Z</createdDateTime>
+    <time_Period.timeInterval>
+        <start>2026-03-18T23:00Z</start>
+        <end>2026-03-19T23:00Z</end>
+    </time_Period.timeInterval>
+    <!-- Wind Onshore: 3000 MW for hours 1-3 -->
+    <TimeSeries>
+        <mRID>TS001</mRID>
+        <businessType>A01</businessType>
+        <inBiddingZone_Domain.mRID codingScheme="A01">10YNL----------L</inBiddingZone_Domain.mRID>
+        <quantity_Measure_Unit.name>MAW</quantity_Measure_Unit.name>
+        <curveType>A01</curveType>
+        <MktPSRType>
+            <psrType>B18</psrType>
+        </MktPSRType>
+        <Period>
+            <timeInterval>
+                <start>2026-03-18T23:00Z</start>
+                <end>2026-03-19T23:00Z</end>
+            </timeInterval>
+            <resolution>PT60M</resolution>
+            <Point>
+                <position>1</position>
+                <quantity>3000</quantity>
+            </Point>
+            <Point>
+                <position>2</position>
+                <quantity>3200</quantity>
+            </Point>
+            <Point>
+                <position>3</position>
+                <quantity>2800</quantity>
+            </Point>
+        </Period>
+    </TimeSeries>
+    <!-- Natural Gas CCGT: 5000 MW for hours 1-3 -->
+    <TimeSeries>
+        <mRID>TS002</mRID>
+        <businessType>A01</businessType>
+        <inBiddingZone_Domain.mRID codingScheme="A01">10YNL----------L</inBiddingZone_Domain.mRID>
+        <quantity_Measure_Unit.name>MAW</quantity_Measure_Unit.name>
+        <curveType>A01</curveType>
+        <MktPSRType>
+            <psrType>B04</psrType>
+        </MktPSRType>
+        <Period>
+            <timeInterval>
+                <start>2026-03-18T23:00Z</start>
+                <end>2026-03-19T23:00Z</end>
+            </timeInterval>
+            <resolution>PT60M</resolution>
+            <Point>
+                <position>1</position>
+                <quantity>5000</quantity>
+            </Point>
+            <Point>
+                <position>2</position>
+                <quantity>4800</quantity>
+            </Point>
+            <Point>
+                <position>3</position>
+                <quantity>5200</quantity>
+            </Point>
+        </Period>
+    </TimeSeries>
+    <!-- Nuclear: 500 MW for hours 1-3 -->
+    <TimeSeries>
+        <mRID>TS003</mRID>
+        <businessType>A01</businessType>
+        <inBiddingZone_Domain.mRID codingScheme="A01">10YNL----------L</inBiddingZone_Domain.mRID>
+        <quantity_Measure_Unit.name>MAW</quantity_Measure_Unit.name>
+        <curveType>A01</curveType>
+        <MktPSRType>
+            <psrType>B14</psrType>
+        </MktPSRType>
+        <Period>
+            <timeInterval>
+                <start>2026-03-18T23:00Z</start>
+                <end>2026-03-19T23:00Z</end>
+            </timeInterval>
+            <resolution>PT60M</resolution>
+            <Point>
+                <position>1</position>
+                <quantity>500</quantity>
+            </Point>
+            <Point>
+                <position>2</position>
+                <quantity>500</quantity>
+            </Point>
+            <Point>
+                <position>3</position>
+                <quantity>500</quantity>
+            </Point>
+        </Period>
+    </TimeSeries>
+    <!-- Solar: 0 MW hour 1, 200 MW hour 2, 800 MW hour 3 -->
+    <TimeSeries>
+        <mRID>TS004</mRID>
+        <businessType>A01</businessType>
+        <inBiddingZone_Domain.mRID codingScheme="A01">10YNL----------L</inBiddingZone_Domain.mRID>
+        <quantity_Measure_Unit.name>MAW</quantity_Measure_Unit.name>
+        <curveType>A01</curveType>
+        <MktPSRType>
+            <psrType>B16</psrType>
+        </MktPSRType>
+        <Period>
+            <timeInterval>
+                <start>2026-03-18T23:00Z</start>
+                <end>2026-03-19T23:00Z</end>
+            </timeInterval>
+            <resolution>PT60M</resolution>
+            <Point>
+                <position>1</position>
+                <quantity>0</quantity>
+            </Point>
+            <Point>
+                <position>2</position>
+                <quantity>200</quantity>
+            </Point>
+            <Point>
+                <position>3</position>
+                <quantity>800</quantity>
+            </Point>
+        </Period>
+    </TimeSeries>
+</GL_MarketDocument>

@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grid Intensity API — Free EU Grid Emissions Data</title>
+<meta name="description" content="Free, open API for hourly electricity grid emissions intensity (gCO₂eq/kWh) across EU countries. No API key required. Sourced from ENTSO-E Transparency Platform.">
+<meta property="og:title" content="Grid Intensity API — Free EU Grid Emissions Data">
+<meta property="og:description" content="Free hourly gCO₂eq/kWh grid emissions data for EU countries. No API key required.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0a0a0f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.4); }
+  50% { opacity: 0.6; box-shadow: 0 0 0 4px rgba(34, 211, 238, 0); }
+}
+
+:root {
+  --bg: #0a0a0f;
+  --bg-card: #111118;
+  --bg-code: #0c0c13;
+  --surface: #15151e;
+  --border: #1e1e2e;
+  --border-hover: #2a2a3e;
+  --text: #e0e0e8;
+  --text-secondary: #9898b0;
+  --text-muted: #5c5c72;
+  --accent: #22d3ee;
+  --accent-dim: rgba(34, 211, 238, 0.1);
+  --accent-border: rgba(34, 211, 238, 0.2);
+  --green: #34d399;
+  --yellow: #fbbf24;
+  --red: #f87171;
+  --purple: #a78bfa;
+  --blue: #60a5fa;
+  --teal: #2dd4bf;
+  --font-display: 'Outfit', sans-serif;
+  --font-code: 'Fira Code', monospace;
+  --radius: 10px;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-display);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Dot grid */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Reveal */
+.reveal { opacity: 0; transform: translateY(20px); }
+.reveal.visible { animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+/* ── Nav ── */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 14px 0;
+  background: rgba(10, 10, 15, 0.88);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+nav .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nav-brand {
+  font-family: var(--font-code);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+}
+.nav-brand::before {
+  content: '>';
+  margin-right: 6px;
+  opacity: 0.4;
+}
+.nav-links { display: flex; align-items: center; gap: 24px; }
+.nav-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 450;
+  transition: color 0.15s;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-links .nav-cta {
+  color: var(--bg);
+  background: var(--accent);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  transition: opacity 0.15s;
+}
+.nav-links .nav-cta:hover { opacity: 0.9; }
+
+/* ── Hero ── */
+.hero {
+  padding: 72px 0 36px;
+  text-align: center;
+  position: relative;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(ellipse, rgba(34, 211, 238, 0.04) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero h1 {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  margin-bottom: 16px;
+}
+.hero h1 span { color: var(--accent); }
+.hero p {
+  color: var(--text-secondary);
+  font-size: 17px;
+  max-width: 560px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ── Stats ── */
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 1px;
+  background: var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  max-width: 600px;
+  margin: 40px auto 56px;
+}
+.stat {
+  flex: 1;
+  text-align: center;
+  padding: 18px 8px;
+  background: var(--bg-card);
+}
+.stat-value {
+  font-family: var(--font-code);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--accent);
+}
+.stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+}
+
+/* ── Code Block ── */
+.code-section { margin-bottom: 72px; }
+
+.code-chrome {
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-code);
+  position: relative;
+}
+.code-chrome::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: calc(var(--radius) + 1px);
+  padding: 1px;
+  background: linear-gradient(135deg, var(--accent-border), transparent 40%, transparent 60%, var(--accent-border));
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+}
+
+.code-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.code-tabs { display: flex; flex-wrap: wrap; gap: 0; }
+.code-tab {
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-family: var(--font-code);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.code-tab:hover { color: var(--text-secondary); }
+.code-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.code-toolbar-right {
+  margin-left: auto;
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.code-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 240px;
+}
+.code-pane { position: relative; }
+.code-pane + .code-pane {
+  border-left: 1px solid var(--border);
+  background: rgba(0,0,0,0.15);
+}
+.code-pane-label {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-family: var(--font-code);
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--bg);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.code-pane pre {
+  padding: 18px 20px;
+  margin: 0;
+  overflow-x: auto;
+  font-family: var(--font-code);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+/* Syntax — V1 style */
+.kw { color: var(--purple); }
+.str { color: var(--green); }
+.num { color: var(--yellow); }
+.cmt { color: var(--text-muted); font-style: italic; }
+.fn { color: var(--accent); }
+.key { color: #f472b6; }
+.bool { color: var(--teal); }
+
+/* ── Live Data ── */
+.live-section { margin-bottom: 72px; }
+
+.section-header {
+  margin-bottom: 24px;
+}
+.section-header h2 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-header p {
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--green);
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse 2s infinite;
+}
+
+.live-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.country-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  transition: border-color 0.2s, transform 0.15s;
+  border-left: 3px solid var(--border);
+}
+.country-card.low { border-left-color: var(--green); }
+.country-card.mid { border-left-color: var(--yellow); }
+.country-card.high { border-left-color: var(--red); }
+.country-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+}
+
+.cc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.cc-flag { font-size: 22px; }
+.cc-code {
+  font-family: var(--font-code);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.cc-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.cc-intensity {
+  font-family: var(--font-code);
+  font-size: 28px;
+  font-weight: 600;
+}
+.cc-unit {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.cc-time {
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+.intensity-low { color: var(--green); }
+.intensity-mid { color: var(--yellow); }
+.intensity-high { color: var(--red); }
+
+/* ── Endpoints ── */
+.endpoints-section { margin-bottom: 72px; }
+
+.endpoint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.endpoint {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 0.15s;
+}
+.endpoint:hover { border-color: var(--border-hover); }
+
+.ep-method {
+  font-family: var(--font-code);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--green);
+  background: rgba(52, 211, 153, 0.08);
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid rgba(52, 211, 153, 0.12);
+  flex-shrink: 0;
+}
+.ep-path {
+  font-family: var(--font-code);
+  font-size: 14px;
+}
+.ep-path .dim { color: var(--text-muted); }
+.ep-desc {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-left: auto;
+}
+
+/* ── Methodology ── */
+.method-section { margin-bottom: 72px; }
+
+.method-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.method-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  transition: border-color 0.15s;
+}
+.method-card:hover { border-color: var(--border-hover); }
+
+.method-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin-bottom: 14px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-border);
+}
+.method-card h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.method-card p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* ── Why ── */
+.why-section { margin-bottom: 72px; }
+.why-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+}
+.why-card h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  letter-spacing: -0.01em;
+}
+.why-card p {
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.7;
+  margin-bottom: 14px;
+  max-width: 720px;
+}
+.why-card p:last-child { margin-bottom: 0; }
+.why-card a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.why-card a:hover { text-decoration: underline; }
+
+/* ── Footer ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 28px 0;
+  position: relative;
+  z-index: 1;
+}
+.footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.footer-left {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.footer-left a {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.footer-left a:hover { color: var(--accent); }
+.footer-links { display: flex; gap: 20px; }
+.footer-links a {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.footer-links a:hover { color: var(--text-secondary); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  .reveal { opacity: 1; transform: none; }
+}
+
+/* ── Responsive ── */
+@media (max-width: 960px) {
+  .live-grid { grid-template-columns: repeat(2, 1fr); }
+  .method-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .hero h1 { font-size: 28px; }
+  .stats { flex-wrap: wrap; }
+  .stat { min-width: 110px; }
+  .code-body { grid-template-columns: 1fr; }
+  .code-pane + .code-pane { border-left: none; border-top: 1px solid var(--border); }
+  .live-grid { grid-template-columns: 1fr; }
+  .method-grid { grid-template-columns: 1fr; }
+  .endpoint { flex-wrap: wrap; }
+  .ep-desc { margin-left: 0; }
+  .footer-inner { flex-direction: column; gap: 12px; }
+  .nav-cta { display: none; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="/" class="nav-brand">grid.intensity</a>
+    <div class="nav-links">
+      <a href="#live">Live Data</a>
+      <a href="#endpoints">Endpoints</a>
+      <a href="/docs">API Docs</a>
+      <a href="https://github.com/rdeknijf/grid-emissions-api" target="_blank">GitHub</a>
+      <a href="/docs" class="nav-cta">Try it</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero reveal">
+  <div class="container">
+    <h1>Free EU Grid <span>Emissions</span> Data</h1>
+    <p>Hourly electricity grid carbon intensity for EU countries. No API key required. Sourced from ENTSO-E Transparency Platform.</p>
+  </div>
+</section>
+
+<div class="container reveal" style="animation-delay:0.08s">
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value">5</div>
+      <div class="stat-label">Countries</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">Hourly</div>
+      <div class="stat-label">Granularity</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">2020–now</div>
+      <div class="stat-label">Historical</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">Free</div>
+      <div class="stat-label">No auth</div>
+    </div>
+  </div>
+</div>
+
+<section class="code-section reveal" style="animation-delay:0.16s">
+  <div class="container">
+    <div class="code-chrome">
+      <div class="code-toolbar">
+        <div class="code-tabs">
+          <button class="code-tab active" data-lang="curl">curl</button>
+          <button class="code-tab" data-lang="python">Python</button>
+          <button class="code-tab" data-lang="typescript">TypeScript</button>
+          <button class="code-tab" data-lang="javascript">JavaScript</button>
+          <button class="code-tab" data-lang="go">Go</button>
+          <button class="code-tab" data-lang="rust">Rust</button>
+          <button class="code-tab" data-lang="ruby">Ruby</button>
+          <button class="code-tab" data-lang="php">PHP</button>
+        </div>
+        <span class="code-toolbar-right">live response →</span>
+      </div>
+      <div class="code-body">
+        <div class="code-pane">
+          <span class="code-pane-label">request</span>
+          <pre id="code-request"></pre>
+        </div>
+        <div class="code-pane">
+          <span class="code-pane-label">response</span>
+          <pre id="code-response"><span class="cmt">Loading…</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="live-section reveal" id="live">
+  <div class="container">
+    <div class="section-header">
+      <h2><span class="live-dot"></span> Live Intensity</h2>
+      <p>Most recent emissions intensity across all available countries.</p>
+    </div>
+    <div class="live-grid" id="live-grid"></div>
+  </div>
+</section>
+
+<section class="endpoints-section reveal" id="endpoints">
+  <div class="container">
+    <div class="section-header">
+      <h2>Endpoints</h2>
+      <p>Three endpoints. No authentication. JSON responses.</p>
+    </div>
+    <div class="endpoint-list">
+      <div class="endpoint">
+        <span class="ep-method">GET</span>
+        <span class="ep-path">/v1/countries</span>
+        <span class="ep-desc">List available countries and bidding zones</span>
+      </div>
+      <div class="endpoint">
+        <span class="ep-method">GET</span>
+        <span class="ep-path">/v1/intensity<span class="dim">?country=NL&amp;start=…&amp;end=…</span></span>
+        <span class="ep-desc">Hourly intensity for a time range (max 31 days)</span>
+      </div>
+      <div class="endpoint">
+        <span class="ep-method">GET</span>
+        <span class="ep-path">/v1/intensity/latest<span class="dim">?country=NL</span></span>
+        <span class="ep-desc">Most recent data point for a country</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="method-section reveal">
+  <div class="container">
+    <div class="section-header">
+      <h2>Data Sources &amp; Methodology</h2>
+      <p>Transparent, reproducible, open.</p>
+    </div>
+    <div class="method-grid">
+      <div class="method-card">
+        <div class="method-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+        <h3>ENTSO-E Transparency Platform</h3>
+        <p>Real-time generation data per fuel type from the official European electricity transmission operator platform.</p>
+      </div>
+      <div class="method-card">
+        <div class="method-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M5 20V8l3-3h8l3 3v12"/><path d="M9 5v3"/><path d="M15 5v3"/><path d="M9 12h1"/><path d="M14 12h1"/><path d="M9 16h1"/><path d="M14 16h1"/></svg></div>
+        <h3>IPCC AR6 Emission Factors</h3>
+        <p>Lifecycle median gCO₂eq/kWh per fuel type from the Intergovernmental Panel on Climate Change, 6th Assessment Report.</p>
+      </div>
+      <div class="method-card">
+        <div class="method-icon">Σ</div>
+        <h3>Weighted Average</h3>
+        <p>Intensity = Σ (generation share × emission factor). Location-based method following GHG Protocol Scope 2 Guidance.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="why-section reveal">
+  <div class="container">
+    <div class="why-card">
+      <h3>Why This Exists</h3>
+      <p>The EU's electricity grids publish generation data through <a href="https://transparency.entsoe.eu/" target="_blank">ENTSO-E</a>, but the raw data is painful: inconsistent XML formats, frequent gaps, rate limits, and no pre-computed emissions intensities. Every developer building carbon-aware tools ends up writing the same parsing and gap-filling code.</p>
+      <p>This API does that work once so you don't have to. It normalises ENTSO-E generation data, applies <a href="https://www.ipcc.ch/report/ar6/wg3/" target="_blank">IPCC AR6</a> lifecycle emission factors, and serves clean, hourly gCO₂eq/kWh — ready for Scope 2 reporting, carbon-aware scheduling, demand response, or any application that needs to know how dirty the grid is right now.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-left">Built by <a href="https://deknijf.com">De Knijf ICT</a></div>
+      <div class="footer-links">
+        <a href="https://transparency.entsoe.eu/" target="_blank">ENTSO-E</a>
+        <a href="/docs">API Docs</a>
+        <a href="https://github.com/rdeknijf/grid-emissions-api" target="_blank">Source</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+const FLAGS = { NL: '🇳🇱', DE: '🇩🇪', FR: '🇫🇷', BE: '🇧🇪', DK1: '🇩🇰', DK2: '🇩🇰' };
+const NAMES = { NL: 'Netherlands', DE: 'Germany', FR: 'France', BE: 'Belgium', DK1: 'Denmark West', DK2: 'Denmark East' };
+const COUNTRIES = ['NL', 'DE', 'FR', 'BE', 'DK1', 'DK2'];
+
+const code = {
+  curl: `<span class="cmt"># Get latest intensity for the Netherlands</span>
+<span class="fn">curl</span> <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=NL"</span>`,
+
+  python: `<span class="kw">import</span> httpx
+
+response = httpx.<span class="fn">get</span>(
+    <span class="str">"https://grid.deknijf.com/v1/intensity/latest"</span>,
+    params={<span class="str">"country"</span>: <span class="str">"NL"</span>}
+)
+data = response.<span class="fn">json</span>()
+<span class="fn">print</span>(data[<span class="str">"data"</span>][<span class="num">0</span>][<span class="str">"intensity"</span>])`,
+
+  javascript: `<span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(
+  <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=NL"</span>
+);
+<span class="kw">const</span> { data } = <span class="kw">await</span> response.<span class="fn">json</span>();
+console.<span class="fn">log</span>(data[<span class="num">0</span>].intensity);`,
+
+  go: `resp, err := http.<span class="fn">Get</span>(
+    <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=NL"</span>,
+)
+<span class="kw">defer</span> resp.Body.<span class="fn">Close</span>()
+
+<span class="kw">var</span> result IntensityResponse
+json.<span class="fn">NewDecoder</span>(resp.Body).<span class="fn">Decode</span>(&result)
+fmt.<span class="fn">Println</span>(result.Data[<span class="num">0</span>].Intensity)`,
+
+  typescript: `<span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(
+  <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=NL"</span>
+);
+
+<span class="kw">interface</span> DataPoint {
+  timestamp: <span class="kw">string</span>;
+  intensity: <span class="kw">number</span>;
+  generation_mix: Record&lt;<span class="kw">string</span>, <span class="kw">number</span>&gt;;
+}
+
+<span class="kw">const</span> { data } = <span class="kw">await</span> response.<span class="fn">json</span>() <span class="kw">as</span> { data: DataPoint[] };
+console.<span class="fn">log</span>(data[<span class="num">0</span>].intensity);`,
+
+  rust: `<span class="kw">let</span> body: serde_json::Value = reqwest::<span class="fn">get</span>(
+    <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=NL"</span>
+)
+.<span class="kw">await</span>?
+.<span class="fn">json</span>()
+.<span class="kw">await</span>?;
+
+<span class="fn">println!</span>(<span class="str">"{}"</span>, body[<span class="str">"data"</span>][<span class="num">0</span>][<span class="str">"intensity"</span>]);`,
+
+  ruby: `<span class="kw">require</span> <span class="str">"net/http"</span>
+<span class="kw">require</span> <span class="str">"json"</span>
+
+uri = URI(<span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=NL"</span>)
+data = JSON.<span class="fn">parse</span>(Net::HTTP.<span class="fn">get</span>(uri))
+<span class="fn">puts</span> data[<span class="str">"data"</span>][<span class="num">0</span>][<span class="str">"intensity"</span>]`,
+
+  php: `<span class="var">$response</span> = <span class="fn">file_get_contents</span>(
+    <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=NL"</span>
+);
+
+<span class="var">$data</span> = <span class="fn">json_decode</span>(<span class="var">$response</span>, <span class="kw">true</span>);
+<span class="fn">echo</span> <span class="var">$data</span>[<span class="str">"data"</span>][<span class="num">0</span>][<span class="str">"intensity"</span>];`
+};
+
+// Tab switching
+document.querySelectorAll('.code-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('code-request').innerHTML = code[tab.dataset.lang];
+  });
+});
+document.getElementById('code-request').innerHTML = code.curl;
+
+// Helpers
+function intensityClass(v) {
+  return v < 100 ? 'intensity-low' : v < 300 ? 'intensity-mid' : 'intensity-high';
+}
+
+function fmtTime(ts) {
+  return new Date(ts).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+}
+
+function highlightJson(obj) {
+  return JSON.stringify(obj, null, 2)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"([^"]+)":/g, '<span class="key">"$1"</span>:')
+    .replace(/: "([^"]+)"/g, ': <span class="str">"$1"</span>')
+    .replace(/: (\d+\.?\d*)/g, ': <span class="num">$1</span>')
+    .replace(/: (true|false|null)/g, ': <span class="kw">$1</span>');
+}
+
+// Fetch hero response
+async function loadHero() {
+  try {
+    const r = await fetch('/v1/intensity/latest?country=NL');
+    const d = await r.json();
+    const pt = d.data[0];
+    if (!pt) throw 0;
+    document.getElementById('code-response').innerHTML = highlightJson({
+      country: d.country, unit: d.unit, method: d.method,
+      data: [{ timestamp: pt.timestamp, intensity: pt.intensity, generation_mix: pt.generation_mix }]
+    });
+  } catch {
+    document.getElementById('code-response').innerHTML =
+      '<span class="cmt">// API not running locally.\n// Start with: uv run uvicorn grid_emissions_api.main:app</span>';
+  }
+}
+
+// Fetch live data
+async function loadLive() {
+  const grid = document.getElementById('live-grid');
+  const results = await Promise.allSettled(
+    COUNTRIES.map(c => fetch('/v1/intensity/latest?country=' + c).then(r => r.json()))
+  );
+
+  let any = false;
+  results.forEach((res, i) => {
+    if (res.status !== 'fulfilled') return;
+    const pt = res.value.data?.[0];
+    if (!pt) return;
+    any = true;
+    const band = pt.intensity < 100 ? 'low' : pt.intensity < 300 ? 'mid' : 'high';
+    const card = document.createElement('div');
+    card.className = 'country-card ' + band;
+    card.innerHTML = `
+      <div class="cc-header">
+        <span class="cc-flag">${FLAGS[COUNTRIES[i]]}</span>
+        <span class="cc-code">${COUNTRIES[i]}</span>
+      </div>
+      <div class="cc-name">${NAMES[COUNTRIES[i]]}</div>
+      <div class="cc-intensity ${intensityClass(pt.intensity)}">
+        ${Math.round(pt.intensity)}
+        <span class="cc-unit">gCO₂eq/kWh</span>
+      </div>
+      <div class="cc-time">${fmtTime(pt.timestamp)}</div>
+    `;
+    grid.appendChild(card);
+  });
+
+  if (!any) {
+    grid.innerHTML = '<p style="grid-column:1/-1;color:var(--text-muted);font-family:var(--font-code);font-size:13px;text-align:center;padding:24px">No live data available — ingest data first</p>';
+  }
+}
+
+// Scroll reveal
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+}, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+// Init
+loadHero();
+loadLive();
+</script>
+</body>
+</html>
