@@ -340,6 +340,10 @@ nav .container {
   border-color: var(--border-hover);
   transform: translateY(-2px);
 }
+.country-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
 
 .cc-header {
   display: flex;
@@ -728,80 +732,47 @@ const NAMES = {
 };
 const COUNTRIES = Object.keys(FLAGS);
 
-const code = {
-  curl: `<span class="cmt"># Get latest intensity for the Netherlands</span>
-<span class="fn">curl</span> <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=NL"</span>`,
+let selectedCountry = 'NL';
 
-  python: `<span class="kw">import</span> httpx
-
-response = httpx.<span class="fn">get</span>(
-    <span class="str">"https://grid.deknijf.com/v1/intensity/latest"</span>,
-    params={<span class="str">"country"</span>: <span class="str">"NL"</span>}
-)
-data = response.<span class="fn">json</span>()
-<span class="fn">print</span>(data[<span class="str">"data"</span>][<span class="num">0</span>][<span class="str">"intensity"</span>])`,
-
-  javascript: `<span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(
-  <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=NL"</span>
-);
-<span class="kw">const</span> { data } = <span class="kw">await</span> response.<span class="fn">json</span>();
-console.<span class="fn">log</span>(data[<span class="num">0</span>].intensity);`,
-
-  go: `resp, err := http.<span class="fn">Get</span>(
-    <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=NL"</span>,
-)
-<span class="kw">defer</span> resp.Body.<span class="fn">Close</span>()
-
-<span class="kw">var</span> result IntensityResponse
-json.<span class="fn">NewDecoder</span>(resp.Body).<span class="fn">Decode</span>(&result)
-fmt.<span class="fn">Println</span>(result.Data[<span class="num">0</span>].Intensity)`,
-
-  typescript: `<span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(
-  <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=NL"</span>
-);
-
-<span class="kw">interface</span> DataPoint {
-  timestamp: <span class="kw">string</span>;
-  intensity: <span class="kw">number</span>;
-  generation_mix: Record&lt;<span class="kw">string</span>, <span class="kw">number</span>&gt;;
+function codeFor(c) {
+  const name = NAMES[c] || c;
+  return {
+    curl: `<span class="cmt"># Get latest intensity for ${name}</span>\n<span class="fn">curl</span> <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=${c}"</span>`,
+    python: `<span class="kw">import</span> httpx\n\nresponse = httpx.<span class="fn">get</span>(\n    <span class="str">"https://grid.deknijf.com/v1/intensity/latest"</span>,\n    params={<span class="str">"country"</span>: <span class="str">"${c}"</span>}\n)\ndata = response.<span class="fn">json</span>()\n<span class="fn">print</span>(data[<span class="str">"data"</span>][<span class="num">0</span>][<span class="str">"intensity"</span>])`,
+    javascript: `<span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(\n  <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=${c}"</span>\n);\n<span class="kw">const</span> { data } = <span class="kw">await</span> response.<span class="fn">json</span>();\nconsole.<span class="fn">log</span>(data[<span class="num">0</span>].intensity);`,
+    go: `resp, err := http.<span class="fn">Get</span>(\n    <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=${c}"</span>,\n)\n<span class="kw">defer</span> resp.Body.<span class="fn">Close</span>()\n\n<span class="kw">var</span> result IntensityResponse\njson.<span class="fn">NewDecoder</span>(resp.Body).<span class="fn">Decode</span>(&result)\nfmt.<span class="fn">Println</span>(result.Data[<span class="num">0</span>].Intensity)`,
+    typescript: `<span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(\n  <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=${c}"</span>\n);\n\n<span class="kw">interface</span> DataPoint {\n  timestamp: <span class="kw">string</span>;\n  intensity: <span class="kw">number</span>;\n  generation_mix: Record&lt;<span class="kw">string</span>, <span class="kw">number</span>&gt;;\n}\n\n<span class="kw">const</span> { data } = <span class="kw">await</span> response.<span class="fn">json</span>() <span class="kw">as</span> { data: DataPoint[] };\nconsole.<span class="fn">log</span>(data[<span class="num">0</span>].intensity);`,
+    rust: `<span class="kw">let</span> body: serde_json::Value = reqwest::<span class="fn">get</span>(\n    <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=${c}"</span>\n)\n.<span class="kw">await</span>?\n.<span class="fn">json</span>()\n.<span class="kw">await</span>?;\n\n<span class="fn">println!</span>(<span class="str">"{}"</span>, body[<span class="str">"data"</span>][<span class="num">0</span>][<span class="str">"intensity"</span>]);`,
+    ruby: `<span class="kw">require</span> <span class="str">"net/http"</span>\n<span class="kw">require</span> <span class="str">"json"</span>\n\nuri = URI(<span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=${c}"</span>)\ndata = JSON.<span class="fn">parse</span>(Net::HTTP.<span class="fn">get</span>(uri))\n<span class="fn">puts</span> data[<span class="str">"data"</span>][<span class="num">0</span>][<span class="str">"intensity"</span>]`,
+    php: `<span class="var">$response</span> = <span class="fn">file_get_contents</span>(\n    <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=${c}"</span>\n);\n\n<span class="var">$data</span> = <span class="fn">json_decode</span>(<span class="var">$response</span>, <span class="kw">true</span>);\n<span class="fn">echo</span> <span class="var">$data</span>[<span class="str">"data"</span>][<span class="num">0</span>][<span class="str">"intensity"</span>];`
+  };
 }
 
-<span class="kw">const</span> { data } = <span class="kw">await</span> response.<span class="fn">json</span>() <span class="kw">as</span> { data: DataPoint[] };
-console.<span class="fn">log</span>(data[<span class="num">0</span>].intensity);`,
+function activeLang() {
+  const t = document.querySelector('.code-tab.active');
+  return t ? t.dataset.lang : 'curl';
+}
 
-  rust: `<span class="kw">let</span> body: serde_json::Value = reqwest::<span class="fn">get</span>(
-    <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=NL"</span>
-)
-.<span class="kw">await</span>?
-.<span class="fn">json</span>()
-.<span class="kw">await</span>?;
+function updateCode() {
+  document.getElementById('code-request').innerHTML = codeFor(selectedCountry)[activeLang()];
+}
 
-<span class="fn">println!</span>(<span class="str">"{}"</span>, body[<span class="str">"data"</span>][<span class="num">0</span>][<span class="str">"intensity"</span>]);`,
-
-  ruby: `<span class="kw">require</span> <span class="str">"net/http"</span>
-<span class="kw">require</span> <span class="str">"json"</span>
-
-uri = URI(<span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=NL"</span>)
-data = JSON.<span class="fn">parse</span>(Net::HTTP.<span class="fn">get</span>(uri))
-<span class="fn">puts</span> data[<span class="str">"data"</span>][<span class="num">0</span>][<span class="str">"intensity"</span>]`,
-
-  php: `<span class="var">$response</span> = <span class="fn">file_get_contents</span>(
-    <span class="str">"https://grid.deknijf.com/v1/intensity/latest?country=NL"</span>
-);
-
-<span class="var">$data</span> = <span class="fn">json_decode</span>(<span class="var">$response</span>, <span class="kw">true</span>);
-<span class="fn">echo</span> <span class="var">$data</span>[<span class="str">"data"</span>][<span class="num">0</span>][<span class="str">"intensity"</span>];`
-};
+async function selectCountry(c) {
+  selectedCountry = c;
+  document.querySelectorAll('.country-card').forEach(el => el.classList.toggle('selected', el.dataset.country === c));
+  updateCode();
+  await loadHeroForCountry(c);
+}
 
 // Tab switching
 document.querySelectorAll('.code-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
-    document.getElementById('code-request').innerHTML = code[tab.dataset.lang];
+    updateCode();
   });
 });
-document.getElementById('code-request').innerHTML = code.curl;
+updateCode();
 
 // Helpers
 function intensityClass(v) {
@@ -821,10 +792,10 @@ function highlightJson(obj) {
     .replace(/: (true|false|null)/g, ': <span class="kw">$1</span>');
 }
 
-// Fetch hero response
-async function loadHero() {
+// Fetch hero response for a country
+async function loadHeroForCountry(c) {
   try {
-    const r = await fetch('/v1/intensity/latest?country=NL');
+    const r = await fetch('/v1/intensity/latest?country=' + c);
     const d = await r.json();
     const pt = d.data[0];
     if (!pt) throw 0;
@@ -834,9 +805,11 @@ async function loadHero() {
     });
   } catch {
     document.getElementById('code-response').innerHTML =
-      '<span class="cmt">// API not running locally.\n// Start with: uv run uvicorn grid_emissions_api.main:app</span>';
+      '<span class="cmt">// No data available for ' + c + '</span>';
   }
 }
+
+async function loadHero() { await loadHeroForCountry(selectedCountry); }
 
 // Fetch live data
 async function loadLive() {
@@ -854,6 +827,9 @@ async function loadLive() {
     const band = pt.intensity < 100 ? 'low' : pt.intensity < 300 ? 'mid' : 'high';
     const card = document.createElement('div');
     card.className = 'country-card ' + band;
+    card.dataset.country = COUNTRIES[i];
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', () => selectCountry(COUNTRIES[i]));
     card.innerHTML = `
       <div class="cc-header">
         <span class="cc-flag">${FLAGS[COUNTRIES[i]]}</span>
