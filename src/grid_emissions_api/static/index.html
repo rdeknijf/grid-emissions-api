@@ -523,6 +523,55 @@ footer {
 }
 .footer-links a:hover { color: var(--text-secondary); }
 
+/* ── Copy Button ── */
+.copy-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-family: var(--font-code);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s, border-color 0.15s;
+  z-index: 2;
+}
+.copy-btn:hover { color: var(--text); border-color: var(--border-hover); }
+.copy-btn.copied { color: var(--green); border-color: var(--green); }
+.copy-btn svg { width: 13px; height: 13px; }
+
+/* ── Sort Controls ── */
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px;
+}
+.section-header-row .section-header { margin-bottom: 0; }
+.sort-select {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-family: var(--font-code);
+  font-size: 12px;
+  padding: 6px 28px 6px 10px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239898b0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.sort-select:hover { border-color: var(--border-hover); }
+.sort-select:focus { outline: none; border-color: var(--accent); }
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -616,10 +665,12 @@ footer {
       <div class="code-body">
         <div class="code-pane">
           <span class="code-pane-label">request</span>
+          <button class="copy-btn" onclick="copyPane('code-request')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button>
           <pre id="code-request"></pre>
         </div>
         <div class="code-pane">
           <span class="code-pane-label">response</span>
+          <button class="copy-btn" onclick="copyPane('code-response')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button>
           <pre id="code-response"><span class="cmt">Loading…</span></pre>
         </div>
       </div>
@@ -629,9 +680,16 @@ footer {
 
 <section class="live-section reveal" id="live">
   <div class="container">
-    <div class="section-header">
-      <h2><span class="live-dot"></span> Live Intensity</h2>
-      <p>Most recent emissions intensity across all available countries.</p>
+    <div class="section-header-row">
+      <div class="section-header">
+        <h2><span class="live-dot"></span> Live Intensity</h2>
+        <p>Most recent emissions intensity across all available countries.</p>
+      </div>
+      <select class="sort-select" id="sort-select">
+        <option value="low-high">Intensity: Low → High</option>
+        <option value="high-low">Intensity: High → Low</option>
+        <option value="alpha">Alphabetical</option>
+      </select>
     </div>
     <div class="live-grid" id="live-grid"></div>
   </div>
@@ -733,6 +791,21 @@ const NAMES = {
 const COUNTRIES = Object.keys(FLAGS);
 
 let selectedCountry = 'NL';
+let liveEntries = [];
+
+function copyPane(id) {
+  const el = document.getElementById(id);
+  const text = el.innerText || el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = el.closest('.code-pane').querySelector('.copy-btn');
+    btn.classList.add('copied');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Copied';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy';
+    }, 2000);
+  });
+}
 
 function codeFor(c) {
   const name = NAMES[c] || c;
@@ -811,26 +884,30 @@ async function loadHeroForCountry(c) {
 
 async function loadHero() { await loadHeroForCountry(selectedCountry); }
 
-// Fetch live data
-async function loadLive() {
+// Sort + render live grid
+function sortEntries(mode) {
+  const sorted = [...liveEntries];
+  if (mode === 'low-high') sorted.sort((a, b) => a.pt.intensity - b.pt.intensity);
+  else if (mode === 'high-low') sorted.sort((a, b) => b.pt.intensity - a.pt.intensity);
+  else sorted.sort((a, b) => (NAMES[a.country] || a.country).localeCompare(NAMES[b.country] || b.country));
+  return sorted;
+}
+
+function renderGrid() {
   const grid = document.getElementById('live-grid');
-  const results = await Promise.allSettled(
-    COUNTRIES.map(c => fetch('/v1/intensity/latest?country=' + c).then(r => r.json()))
-  );
+  const mode = document.getElementById('sort-select').value;
+  const sorted = sortEntries(mode);
+  grid.innerHTML = '';
 
-  const entries = [];
-  results.forEach((res, i) => {
-    if (res.status !== 'fulfilled') return;
-    const pt = res.value.data?.[0];
-    if (!pt) return;
-    entries.push({ country: COUNTRIES[i], pt });
-  });
-  entries.sort((a, b) => a.pt.intensity - b.pt.intensity);
+  if (sorted.length === 0) {
+    grid.innerHTML = '<p style="grid-column:1/-1;color:var(--text-muted);font-family:var(--font-code);font-size:13px;text-align:center;padding:24px">No live data available — ingest data first</p>';
+    return;
+  }
 
-  entries.forEach(({ country, pt }) => {
+  sorted.forEach(({ country, pt }) => {
     const band = pt.intensity < 100 ? 'low' : pt.intensity < 300 ? 'mid' : 'high';
     const card = document.createElement('div');
-    card.className = 'country-card ' + band;
+    card.className = 'country-card ' + band + (country === selectedCountry ? ' selected' : '');
     card.dataset.country = country;
     card.style.cursor = 'pointer';
     card.addEventListener('click', () => selectCountry(country));
@@ -848,12 +925,25 @@ async function loadLive() {
     `;
     grid.appendChild(card);
   });
+}
 
-  const any = entries.length > 0;
+document.getElementById('sort-select').addEventListener('change', renderGrid);
 
-  if (!any) {
-    grid.innerHTML = '<p style="grid-column:1/-1;color:var(--text-muted);font-family:var(--font-code);font-size:13px;text-align:center;padding:24px">No live data available — ingest data first</p>';
-  }
+// Fetch live data
+async function loadLive() {
+  const results = await Promise.allSettled(
+    COUNTRIES.map(c => fetch('/v1/intensity/latest?country=' + c).then(r => r.json()))
+  );
+
+  liveEntries = [];
+  results.forEach((res, i) => {
+    if (res.status !== 'fulfilled') return;
+    const pt = res.value.data?.[0];
+    if (!pt) return;
+    liveEntries.push({ country: COUNTRIES[i], pt });
+  });
+
+  renderGrid();
 }
 
 // Scroll reveal
