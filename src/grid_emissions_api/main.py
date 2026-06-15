@@ -4,6 +4,7 @@ Serves hourly gCO2eq/kWh electricity grid emissions intensity
 for EU countries, sourced from ENTSO-E Transparency Platform.
 """
 
+import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -20,6 +21,30 @@ from .models import (
 )
 
 STATIC_DIR = Path(__file__).parent / "static"
+
+
+class _HealthCheckLogFilter(logging.Filter):
+    """Drop uvicorn access-log lines for probe paths.
+
+    Kubernetes liveness/readiness probes hit /healthz every few seconds, which
+    would otherwise drown the access log in 200s. Probe *failures* still surface
+    via pod events, restarts, and any non-2xx the app emits — so suppressing the
+    successful access line costs no observability.
+    """
+
+    _EXCLUDED = ("/healthz",)
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        if not (isinstance(args, tuple) and len(args) >= 3):
+            return True
+        request_line = args[2]
+        if not isinstance(request_line, str):
+            return True
+        return request_line.split("?", 1)[0] not in self._EXCLUDED
+
+
+logging.getLogger("uvicorn.access").addFilter(_HealthCheckLogFilter())
 
 
 @asynccontextmanager
@@ -45,6 +70,13 @@ async def landing_page():
         STATIC_DIR / "index.html",
         headers={"Cache-Control": "public, max-age=3600"},
     )
+
+
+@app.get("/healthz", include_in_schema=False)
+async def healthz():
+    """Liveness/readiness probe target. Kept out of the access log — see
+    _HealthCheckLogFilter. Intentionally cheap: no DB hit."""
+    return {"status": "ok"}
 
 
 def _validate_country(country: str) -> str:

@@ -43,6 +43,12 @@ def client():
     return TestClient(app)
 
 
+def test_healthz(client):
+    resp = client.get("/healthz")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}
+
+
 def test_list_countries(client):
     resp = client.get("/v1/countries")
     assert resp.status_code == 200
