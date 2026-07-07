@@ -751,7 +751,7 @@ footer {
   <div class="container">
     <div class="why-card">
       <h3>Why This Exists</h3>
-      <p>The EU's electricity grids publish generation data through <a href="https://transparency.entsoe.eu/" target="_blank">ENTSO-E</a>, but the raw data is painful: inconsistent XML formats, frequent gaps, rate limits, and no pre-computed emissions intensities. Every developer building carbon-aware tools ends up writing the same parsing and gap-filling code.</p>
+      <p>The EU's electricity grids publish generation data through <a href="https://transparency.entsoe.eu/" target="_blank">ENTSO-E</a>, but the raw data is painful: inconsistent XML formats, mixed sub-hourly and hourly resolutions, rate limits, and no pre-computed emissions intensities. Every developer building carbon-aware tools ends up writing the same parsing and normalisation code.</p>
       <p>This API does that work once so you don't have to. It normalises ENTSO-E generation data, applies <a href="https://www.ipcc.ch/report/ar6/wg3/" target="_blank">IPCC AR6</a> lifecycle emission factors, and serves clean, hourly gCO₂eq/kWh — ready for Scope 2 reporting, carbon-aware scheduling, demand response, or any application that needs to know how dirty the grid is right now.</p>
     </div>
   </div>
