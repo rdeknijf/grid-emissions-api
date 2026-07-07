@@ -52,3 +52,36 @@ def test_parse_hour_2_values():
     assert gen["B04"] == 4800
     assert gen["B14"] == 500
     assert gen["B16"] == 200
+
+
+def _subhourly_xml(quantities: list[float]) -> bytes:
+    """Build a minimal A75 doc with one PT15M period of the given points."""
+    points = "".join(
+        f"<Point><position>{i + 1}</position>"
+        f"<quantity>{q}</quantity></Point>"
+        for i, q in enumerate(quantities)
+    )
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<GL_MarketDocument '
+        'xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">'
+        "<TimeSeries>"
+        "<MktPSRType><psrType>B04</psrType></MktPSRType>"
+        "<Period>"
+        "<timeInterval><start>2026-03-19T00:00Z</start>"
+        "<end>2026-03-19T01:00Z</end></timeInterval>"
+        "<resolution>PT15M</resolution>"
+        f"{points}"
+        "</Period>"
+        "</TimeSeries>"
+        "</GL_MarketDocument>"
+    ).encode()
+
+
+def test_subhourly_points_averaged_by_mean():
+    # Four PT15M points collapse into one hour; the value must be the
+    # arithmetic mean (sum / n), not an order-dependent running pairwise mean.
+    xml = _subhourly_xml([100, 200, 300, 400])
+    result = _parse_generation_xml(xml)
+    hour = datetime(2026, 3, 19, 0, 0, tzinfo=timezone.utc)
+    assert result[hour]["B04"] == 250  # mean, not 312.5 (pairwise)

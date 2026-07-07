@@ -52,8 +52,12 @@ def _parse_generation_xml(xml_bytes: bytes) -> dict[datetime, dict[str, float]]:
     """Parse ENTSO-E A75 XML into {timestamp: {psr_code: mw}}."""
     root = etree.fromstring(xml_bytes)
 
-    # Result: {datetime: {psr_code: mw_value}}
-    result: dict[datetime, dict[str, float]] = {}
+    # Accumulate running sums and counts per (hour, psr_code) so that
+    # sub-hourly points (PT15M/PT30M) can be averaged correctly as sum / n.
+    # A running pairwise mean is order-dependent and wrong (it over-weights
+    # the later points), so we defer the division until all points are seen.
+    sums: dict[datetime, dict[str, float]] = {}
+    counts: dict[datetime, dict[str, int]] = {}
 
     for ts in root.findall(".//ns:TimeSeries", NS):
         # Get the PSR type (fuel type)
@@ -100,16 +104,16 @@ def _parse_generation_xml(xml_bytes: bytes) -> dict[datetime, dict[str, float]]:
                 if resolution_minutes < 60:
                     ts_point = ts_point.replace(minute=0, second=0, microsecond=0)
 
-                if ts_point not in result:
-                    result[ts_point] = {}
+                hour_sums = sums.setdefault(ts_point, {})
+                hour_counts = counts.setdefault(ts_point, {})
+                hour_sums[psr_code] = hour_sums.get(psr_code, 0.0) + quantity
+                hour_counts[psr_code] = hour_counts.get(psr_code, 0) + 1
 
-                # Accumulate (for sub-hourly: average within the hour)
-                if psr_code in result[ts_point]:
-                    # Simple average for sub-hourly data within same hour
-                    result[ts_point][psr_code] = (
-                        result[ts_point][psr_code] + quantity
-                    ) / 2
-                else:
-                    result[ts_point][psr_code] = quantity
-
-    return result
+    # Divide accumulated sums by their counts to get the hourly mean.
+    return {
+        ts_point: {
+            psr_code: total / counts[ts_point][psr_code]
+            for psr_code, total in hour_sums.items()
+        }
+        for ts_point, hour_sums in sums.items()
+    }

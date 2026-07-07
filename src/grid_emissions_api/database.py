@@ -2,11 +2,24 @@
 
 import json
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .config import settings
 from .models import IntensityDataPoint
+
+
+def _utc_iso(dt: datetime) -> str:
+    """Return a canonical UTC ISO-8601 string for `dt`.
+
+    Timestamps are compared as text (lexicographically) by SQLite, so every
+    value we store or query with must share one canonical representation for
+    text order to equal chronological order. Tz-aware datetimes are converted
+    to UTC; naive datetimes are assumed to already be UTC.
+    """
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).isoformat()
 
 
 def _db_path() -> Path:
@@ -58,7 +71,7 @@ def upsert_intensity(
             [
                 (
                     country,
-                    dp.timestamp.isoformat(),
+                    _utc_iso(dp.timestamp),
                     dp.intensity,
                     json.dumps(dp.generation_mix),
                     int(dp.is_estimated),
@@ -83,7 +96,7 @@ def query_intensity(
             WHERE country = ? AND timestamp_utc >= ? AND timestamp_utc < ?
             ORDER BY timestamp_utc
             """,
-            (country, start.isoformat(), end.isoformat()),
+            (country, _utc_iso(start), _utc_iso(end)),
         ).fetchall()
 
     return [
