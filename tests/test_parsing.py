@@ -78,6 +78,27 @@ def _subhourly_xml(quantities: list[float]) -> bytes:
     ).encode()
 
 
+def test_external_entity_is_not_resolved():
+    # An XXE payload: the &xxe; entity must NOT be expanded into file contents.
+    # With the hardened parser this either raises or leaves the entity unresolved
+    # — either way, /etc/passwd never reaches the parsed tree.
+    xxe = (
+        b'<?xml version="1.0"?>'
+        b'<!DOCTYPE r [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'
+        b'<GL_MarketDocument '
+        b'xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">'
+        b"<TimeSeries><MktPSRType><psrType>&xxe;</psrType></MktPSRType>"
+        b"</TimeSeries></GL_MarketDocument>"
+    )
+    try:
+        result = _parse_generation_xml(xxe)
+    except Exception:
+        return  # parser rejected the DTD/entity outright — acceptable
+    # If it parsed, no PSR code carried the file contents.
+    for gen in result.values():
+        assert not any("root:" in code for code in gen)
+
+
 def test_subhourly_points_averaged_by_mean():
     # Four PT15M points collapse into one hour; the value must be the
     # arithmetic mean (sum / n), not an order-dependent running pairwise mean.
