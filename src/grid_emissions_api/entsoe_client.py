@@ -15,6 +15,17 @@ from .models import BIDDING_ZONES
 # ENTSO-E XML namespace
 NS = {"ns": "urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0"}
 
+# Hardened parser: never resolve entities, load DTDs, or hit the network while
+# parsing untrusted upstream XML. Defends against XXE / entity-expansion even
+# though the source is currently trusted — cheap defence in depth.
+_SAFE_PARSER = etree.XMLParser(
+    resolve_entities=False,
+    no_network=True,
+    load_dtd=False,
+    dtd_validation=False,
+    huge_tree=False,
+)
+
 
 def _fmt_ts(dt: datetime) -> str:
     """Format datetime as ENTSO-E expects: YYYYMMDDHHmm."""
@@ -50,7 +61,7 @@ async def fetch_generation(
 
 def _parse_generation_xml(xml_bytes: bytes) -> dict[datetime, dict[str, float]]:
     """Parse ENTSO-E A75 XML into {timestamp: {psr_code: mw}}."""
-    root = etree.fromstring(xml_bytes)
+    root = etree.fromstring(xml_bytes, parser=_SAFE_PARSER)
 
     # Accumulate running sums and counts per (hour, psr_code) so that
     # sub-hourly points (PT15M/PT30M) can be averaged correctly as sum / n.
