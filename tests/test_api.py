@@ -182,3 +182,26 @@ def test_latest_intensity_empty(client):
     )
     assert resp.status_code == 200
     assert resp.json()["data"] == []
+
+
+def test_cors_headers_on_cross_origin_request(client):
+    """The advertised cross-origin fetch() example needs CORS to work."""
+    resp = client.get(
+        "/v1/countries",
+        headers={"Origin": "https://example.com"},
+    )
+    assert resp.status_code == 200
+    assert resp.headers["access-control-allow-origin"] == "*"
+
+
+def test_cors_preflight(client):
+    """A browser preflight (OPTIONS) must be answered for the JSON endpoint."""
+    resp = client.options(
+        "/v1/intensity/latest",
+        headers={
+            "Origin": "https://example.com",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.headers["access-control-allow-origin"] == "*"
