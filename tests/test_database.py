@@ -87,6 +87,35 @@ def test_query_filters_by_time_range():
     assert len(result) == 2
 
 
+def test_query_window_is_offset_normalised():
+    # Same instant (00:00Z) expressed with a +02:00 offset must select the
+    # same boundary rows, not a text-shifted window.
+    from datetime import timedelta
+
+    points = [_make_point(h) for h in range(4)]
+    upsert_intensity("NL", points)
+
+    tz2 = timezone(timedelta(hours=2))
+    result = query_intensity(
+        "NL",
+        datetime(2026, 3, 19, 2, 0, tzinfo=tz2),  # == 00:00Z
+        datetime(2026, 3, 19, 5, 0, tzinfo=tz2),  # == 03:00Z
+    )
+    assert [p.timestamp.hour for p in result] == [0, 1, 2]
+
+
+def test_query_naive_datetime_assumed_utc():
+    points = [_make_point(h) for h in range(4)]
+    upsert_intensity("NL", points)
+
+    result = query_intensity(
+        "NL",
+        datetime(2026, 3, 19, 0, 0),  # naive -> assumed UTC
+        datetime(2026, 3, 19, 2, 0),
+    )
+    assert [p.timestamp.hour for p in result] == [0, 1]
+
+
 def test_query_latest():
     points = [_make_point(0, 300.0), _make_point(1, 350.0), _make_point(2, 400.0)]
     upsert_intensity("NL", points)
