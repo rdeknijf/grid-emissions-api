@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from .database import init_db, query_intensity, query_latest
@@ -61,6 +62,17 @@ app = FastAPI(
     ),
     version="0.2.0",
     lifespan=lifespan,
+)
+
+# This is a public, key-less, read-only open-data API. The landing page
+# advertises a cross-origin `fetch()` example, so browsers on any origin must
+# be allowed to read the JSON responses. GET/HEAD only — no credentials.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "HEAD", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 
