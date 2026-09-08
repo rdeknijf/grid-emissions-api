@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+# The only sanctioned way to sync beads with GitHub (square#909).
+#
+#   bd-sync pull                     pull GitHub issues into beads (inbox)
+#   bd-sync push --parent <epic-id>  push one epic and its children
+#   bd-sync push --issues <id,id>    push named beads
+#   bd-sync status                   dry-run both directions
+#
+# A bare `bd github sync` pushes EVERY bead to GitHub (all or nothing); the
+# backlog lives in beads and GitHub holds only what was pushed on purpose, so
+# this wrapper refuses a push without a scope. Runs against this repository's
+# .beads (id prefix `grid`), whose GitHub side is rdeknijf/grid-emissions-api. Token: the
+# GITHUB_TOKEN environment variable, else `gh auth token`.
+set -eu
+usage() { sed -n '2,10p' "$0" >&2; exit 2; }
+[ $# -ge 1 ] || usage
+cmd=$1; shift
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+  GITHUB_TOKEN=$(gh auth token 2>/dev/null) || { echo "bd-sync: no GITHUB_TOKEN and gh is not logged in" >&2; exit 1; }
+  export GITHUB_TOKEN
+fi
+case $cmd in
+  pull) exec bd github sync --pull-only "$@" ;;
+  status) exec bd github sync --dry-run "$@" ;;
+  push)
+    case "${1:-}" in
+      --parent|--issues) [ $# -ge 2 ] || usage; exec bd github sync --push-only "$@" ;;
+      *) echo "bd-sync: push needs --parent <epic-id> or --issues <id,id>; a whole-backlog push is not allowed" >&2; exit 2 ;;
+    esac ;;
+  *) usage ;;
+esac
