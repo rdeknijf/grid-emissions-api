@@ -30,3 +30,12 @@ CLAUDE.md
 # Internal project notes
 MARKET.md
 TECHNICAL.md
+
+# beads: local interaction log, never shared (.beads/issues.jsonl is the tracked backup)
+.beads/interactions.jsonl
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
