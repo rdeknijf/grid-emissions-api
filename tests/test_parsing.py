@@ -57,13 +57,12 @@ def test_parse_hour_2_values():
 def _subhourly_xml(quantities: list[float]) -> bytes:
     """Build a minimal A75 doc with one PT15M period of the given points."""
     points = "".join(
-        f"<Point><position>{i + 1}</position>"
-        f"<quantity>{q}</quantity></Point>"
+        f"<Point><position>{i + 1}</position><quantity>{q}</quantity></Point>"
         for i, q in enumerate(quantities)
     )
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'
-        '<GL_MarketDocument '
+        "<GL_MarketDocument "
         'xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">'
         "<TimeSeries>"
         "<MktPSRType><psrType>B04</psrType></MktPSRType>"
@@ -85,7 +84,7 @@ def test_external_entity_is_not_resolved():
     xxe = (
         b'<?xml version="1.0"?>'
         b'<!DOCTYPE r [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'
-        b'<GL_MarketDocument '
+        b"<GL_MarketDocument "
         b'xmlns="urn:iec62325.351:tc57wg16:451-6:generationloaddocument:3:0">'
         b"<TimeSeries><MktPSRType><psrType>&xxe;</psrType></MktPSRType>"
         b"</TimeSeries></GL_MarketDocument>"
