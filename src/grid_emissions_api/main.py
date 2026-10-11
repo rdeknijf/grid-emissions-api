@@ -68,7 +68,8 @@ app = FastAPI(
 # advertises a cross-origin `fetch()` example, so browsers on any origin must
 # be allowed to read the JSON responses. GET/HEAD only — no credentials.
 app.add_middleware(
-    CORSMiddleware,
+    # ty 0.0.24 misreads Starlette's ParamSpec signature here; newer ty accepts it.
+    CORSMiddleware,  # ty: ignore[invalid-argument-type]
     allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["GET", "HEAD", "OPTIONS"],
