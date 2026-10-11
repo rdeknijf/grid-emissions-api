@@ -6,7 +6,7 @@ for EU countries, sourced from ENTSO-E Transparency Platform.
 
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
@@ -169,7 +169,7 @@ async def get_latest_intensity(
     country = _validate_country(country)
     zone = BIDDING_ZONES[country]
 
-    now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
     data = query_latest(country)
     start = data[0].timestamp if data else now - timedelta(hours=24)
 

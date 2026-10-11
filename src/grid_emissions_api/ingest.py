@@ -11,7 +11,7 @@ Usage:
 import argparse
 import asyncio
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from .database import init_db, row_count, upsert_intensity
 from .emissions import calculate_intensity
@@ -30,7 +30,7 @@ async def ingest_range(country: str, start: datetime, end: datetime) -> int:
 
 async def ingest_recent(hours: int = 48) -> None:
     """Fetch recent data for all countries."""
-    now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
     start = now - timedelta(hours=hours)
     end = now
 
@@ -48,7 +48,7 @@ async def backfill(start_date: datetime, end_date: datetime | None = None) -> No
     ENTSO-E allows max ~1 year per request but returns faster with smaller ranges.
     """
     if end_date is None:
-        end_date = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+        end_date = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
 
     for country in COUNTRIES:
         print(f"\n{country}:")
@@ -100,10 +100,10 @@ def main() -> None:
     init_db()
 
     if args.backfill:
-        start = datetime.strptime(args.start, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        start = datetime.strptime(args.start, "%Y-%m-%d").replace(tzinfo=UTC)
         end = None
         if args.end:
-            end = datetime.strptime(args.end, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            end = datetime.strptime(args.end, "%Y-%m-%d").replace(tzinfo=UTC)
         print(f"Backfilling from {args.start}...")
         asyncio.run(backfill(start, end))
     else:

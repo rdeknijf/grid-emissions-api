@@ -2,7 +2,7 @@
 
 import os
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 import pytest
 
@@ -30,7 +30,7 @@ def _tmp_db(monkeypatch):
 
 def _make_point(hour: int, intensity: float = 300.0) -> IntensityDataPoint:
     return IntensityDataPoint(
-        timestamp=datetime(2026, 3, 19, hour, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2026, 3, 19, hour, 0, tzinfo=UTC),
         intensity=intensity,
         generation_mix={"gas_ccgt": 0.6, "wind_onshore": 0.4},
     )
@@ -42,8 +42,8 @@ def test_upsert_and_query():
 
     result = query_intensity(
         "NL",
-        datetime(2026, 3, 19, 0, tzinfo=timezone.utc),
-        datetime(2026, 3, 19, 3, tzinfo=timezone.utc),
+        datetime(2026, 3, 19, 0, tzinfo=UTC),
+        datetime(2026, 3, 19, 3, tzinfo=UTC),
     )
     assert len(result) == 3
     assert result[0].intensity == 300.0
@@ -55,8 +55,8 @@ def test_upsert_replaces_existing():
 
     result = query_intensity(
         "NL",
-        datetime(2026, 3, 19, 0, tzinfo=timezone.utc),
-        datetime(2026, 3, 19, 1, tzinfo=timezone.utc),
+        datetime(2026, 3, 19, 0, tzinfo=UTC),
+        datetime(2026, 3, 19, 1, tzinfo=UTC),
     )
     assert len(result) == 1
     assert result[0].intensity == 400.0
@@ -68,8 +68,8 @@ def test_query_filters_by_country():
 
     result = query_intensity(
         "NL",
-        datetime(2026, 3, 19, 0, tzinfo=timezone.utc),
-        datetime(2026, 3, 19, 1, tzinfo=timezone.utc),
+        datetime(2026, 3, 19, 0, tzinfo=UTC),
+        datetime(2026, 3, 19, 1, tzinfo=UTC),
     )
     assert len(result) == 1
     assert result[0].intensity == 300.0
@@ -81,8 +81,8 @@ def test_query_filters_by_time_range():
 
     result = query_intensity(
         "NL",
-        datetime(2026, 3, 19, 1, tzinfo=timezone.utc),
-        datetime(2026, 3, 19, 3, tzinfo=timezone.utc),
+        datetime(2026, 3, 19, 1, tzinfo=UTC),
+        datetime(2026, 3, 19, 3, tzinfo=UTC),
     )
     assert len(result) == 2
 
@@ -143,7 +143,7 @@ def test_row_count():
 def test_generation_mix_roundtrips():
     mix = {"gas_ccgt": 0.6, "wind_onshore": 0.35, "solar": 0.05}
     point = IntensityDataPoint(
-        timestamp=datetime(2026, 3, 19, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2026, 3, 19, 0, tzinfo=UTC),
         intensity=300.0,
         generation_mix=mix,
     )
