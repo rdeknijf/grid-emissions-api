@@ -1,18 +1,24 @@
+# prek runs this file (drop-in for pre-commit). `uv run prek install` installs
+# both the pre-commit and the pre-push stage.
+default_install_hook_types: [pre-commit, pre-push]
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-      - id: check-yaml
-      - id: check-toml
       - id: check-added-large-files
       - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+      - id: detect-private-key
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.7
+    rev: v0.17.0
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: [--fix]
       - id: ruff-format
 
@@ -27,7 +33,16 @@ repos:
         stages: [pre-commit]
 
       - id: ty
-        name: ty
+        name: ty (type check)
         entry: uv run ty check
         language: system
         types: [python]
+        pass_filenames: false
+
+      - id: pytest-quick
+        name: pytest (quick)
+        entry: uv run pytest -x -q --no-cov
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-push]

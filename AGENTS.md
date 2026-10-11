@@ -34,4 +34,4 @@ Status vocabulary:
 
 Effort is a label: `effort:XS`, `effort:S`, `effort:M`, `effort:L`, `effort:XL`.
 
-bd's own git hooks are not installed here (`bd init --skip-hooks`), so pre-commit keeps its hooks. `bd remember` is not used.
+bd's own git hooks are not installed here (`bd init --skip-hooks`), so prek keeps its hooks (`uv run prek install` installs the pre-commit and pre-push stages). `bd remember` is not used.

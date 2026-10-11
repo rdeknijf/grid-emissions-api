@@ -1,6 +1,16 @@
 [tools]
-python = "3.14"
+# Double pin: .python-version is the canonical Python pin (read by uv), and
+# [tool.uv] required-version in pyproject.toml checks uv. Keep python here in
+# step with .python-version.
+python = "3.15"
 uv = "latest"
 
 [env]
 _.python.venv = ".venv"
+
+[settings]
+# Read the Python version from .python-version. Without this, mise exports
+# UV_PYTHON from the user's global mise Python, which overrides .python-version.
+idiomatic_version_file_enable_tools = ["python"]
+# Activate the project's uv-managed .venv on cd.
+python.uv_venv_auto = true
