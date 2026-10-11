@@ -7,7 +7,7 @@ response into structured generation data per hour.
 from datetime import datetime
 
 import httpx
-from lxml import etree  # type: ignore[import]
+from lxml import etree
 
 from .config import settings
 from .models import BIDDING_ZONES
@@ -73,17 +73,17 @@ def _parse_generation_xml(xml_bytes: bytes) -> dict[datetime, dict[str, float]]:
     for ts in root.findall(".//ns:TimeSeries", NS):
         # Get the PSR type (fuel type)
         psr_el = ts.find(".//ns:MktPSRType/ns:psrType", NS)
-        if psr_el is None:
+        if psr_el is None or psr_el.text is None:
             continue
         psr_code = psr_el.text
 
         for period in ts.findall(".//ns:Period", NS):
             start_el = period.find("ns:timeInterval/ns:start", NS)
             resolution_el = period.find("ns:resolution", NS)
-            if start_el is None or resolution_el is None:
+            if start_el is None or start_el.text is None or resolution_el is None:
                 continue
 
-            period_start = datetime.fromisoformat(start_el.text.replace("Z", "+00:00"))
+            period_start = datetime.fromisoformat(start_el.text)
             # Parse resolution (PT15M or PT60M)
             resolution_str = resolution_el.text  # e.g. "PT60M" or "PT15M"
             if resolution_str == "PT60M":
@@ -98,7 +98,12 @@ def _parse_generation_xml(xml_bytes: bytes) -> dict[datetime, dict[str, float]]:
             for point in period.findall("ns:Point", NS):
                 pos_el = point.find("ns:position", NS)
                 qty_el = point.find("ns:quantity", NS)
-                if pos_el is None or qty_el is None:
+                if (
+                    pos_el is None
+                    or pos_el.text is None
+                    or qty_el is None
+                    or qty_el.text is None
+                ):
                     continue
 
                 position = int(pos_el.text)

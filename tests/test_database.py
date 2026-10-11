@@ -1,8 +1,8 @@
 """Tests for SQLite storage layer."""
 
-import os
 import tempfile
 from datetime import UTC, datetime, timezone
+from pathlib import Path
 
 import pytest
 
@@ -19,7 +19,7 @@ from grid_emissions_api.models import IntensityDataPoint
 @pytest.fixture(autouse=True)
 def _tmp_db(monkeypatch):
     with tempfile.TemporaryDirectory() as tmp:
-        db_path = os.path.join(tmp, "test.db")
+        db_path = str(Path(tmp) / "test.db")
         monkeypatch.setenv("DATABASE_PATH", db_path)
         from grid_emissions_api.config import Settings
 

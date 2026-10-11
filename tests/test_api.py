@@ -1,6 +1,5 @@
 """Tests for FastAPI endpoints."""
 
-import os
 import tempfile
 from pathlib import Path
 
@@ -18,7 +17,7 @@ SAMPLE_XML = Path(__file__).parent / "sample_entsoe_response.xml"
 def _tmp_db(monkeypatch):
     """Use a temporary database for each test."""
     with tempfile.TemporaryDirectory() as tmp:
-        db_path = os.path.join(tmp, "test.db")
+        db_path = str(Path(tmp) / "test.db")
         monkeypatch.setenv("DATABASE_PATH", db_path)
         # Re-import settings to pick up the new env var
         from grid_emissions_api.config import Settings

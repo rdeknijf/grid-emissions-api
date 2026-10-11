@@ -8,6 +8,7 @@ import logging
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,7 +22,15 @@ from .models import (
     IntensityResponse,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Awaitable, Callable
+
 STATIC_DIR = Path(__file__).parent / "static"
+
+CountryQuery = Annotated[
+    str,
+    Query(description="ISO country code or bidding zone (e.g. NL, DE, FR, SE1)"),
+]
 
 
 class _HealthCheckLogFilter(logging.Filter):
@@ -49,7 +58,7 @@ logging.getLogger("uvicorn.access").addFilter(_HealthCheckLogFilter())
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     init_db()
     yield
 
@@ -68,8 +77,7 @@ app = FastAPI(
 # advertises a cross-origin `fetch()` example, so browsers on any origin must
 # be allowed to read the JSON responses. GET/HEAD only — no credentials.
 app.add_middleware(
-    # ty 0.0.24 misreads Starlette's ParamSpec signature here; newer ty accepts it.
-    CORSMiddleware,  # ty: ignore[invalid-argument-type]
+    CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["GET", "HEAD", "OPTIONS"],
@@ -78,7 +86,7 @@ app.add_middleware(
 
 
 @app.get("/", include_in_schema=False)
-async def landing_page():
+async def landing_page() -> FileResponse:
     return FileResponse(
         STATIC_DIR / "index.html",
         headers={"Cache-Control": "public, max-age=3600"},
@@ -86,7 +94,7 @@ async def landing_page():
 
 
 @app.get("/healthz", include_in_schema=False)
-async def healthz():
+async def healthz() -> dict[str, str]:
     """Liveness/readiness probe target. Kept out of the access log — see
     _HealthCheckLogFilter. Intentionally cheap: no DB hit."""
     return {"status": "ok"}
@@ -98,14 +106,18 @@ def _validate_country(country: str) -> str:
     if country not in BIDDING_ZONES:
         raise HTTPException(
             status_code=400,
-            detail=f"Unknown country: {country}. Available: {list(BIDDING_ZONES.keys())}",
+            detail=(
+                f"Unknown country: {country}. Available: {list(BIDDING_ZONES.keys())}"
+            ),
         )
     return country
 
 
 @app.middleware("http")
-async def cache_headers(request: Request, call_next):
-    response: Response = await call_next(request)
+async def cache_headers(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    response = await call_next(request)
     path = request.url.path
     if path == "/v1/countries":
         response.headers["Cache-Control"] = "public, max-age=86400"
@@ -117,7 +129,7 @@ async def cache_headers(request: Request, call_next):
 
 
 @app.get("/v1/countries", response_model=CountriesResponse)
-async def list_countries():
+async def list_countries() -> CountriesResponse:
     """List available countries and their bidding zones."""
     return CountriesResponse(
         countries=[
@@ -129,12 +141,10 @@ async def list_countries():
 
 @app.get("/v1/intensity", response_model=IntensityResponse)
 async def get_intensity(
-    country: str = Query(
-        ..., description="ISO country code or bidding zone (e.g. NL, DE, FR, SE1)"
-    ),
-    start: datetime = Query(..., description="Start time (UTC, ISO 8601)"),
-    end: datetime = Query(..., description="End time (UTC, ISO 8601)"),
-):
+    country: CountryQuery,
+    start: Annotated[datetime, Query(description="Start time (UTC, ISO 8601)")],
+    end: Annotated[datetime, Query(description="End time (UTC, ISO 8601)")],
+) -> IntensityResponse:
     """Get hourly emissions intensity for a country and time range."""
     country = _validate_country(country)
     zone = BIDDING_ZONES[country]
@@ -160,11 +170,7 @@ async def get_intensity(
 
 
 @app.get("/v1/intensity/latest", response_model=IntensityResponse)
-async def get_latest_intensity(
-    country: str = Query(
-        ..., description="ISO country code or bidding zone (e.g. NL, DE, FR, SE1)"
-    ),
-):
+async def get_latest_intensity(country: CountryQuery) -> IntensityResponse:
     """Get the most recent emissions intensity for a country."""
     country = _validate_country(country)
     zone = BIDDING_ZONES[country]
