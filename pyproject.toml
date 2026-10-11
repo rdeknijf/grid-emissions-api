@@ -1,20 +1,26 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
 
 [project]
 name = "grid-emissions-api"
 version = "0.1.0"
 description = "Free API for hourly EU electricity grid emissions intensity (gCO2eq/kWh)"
-requires-python = ">=3.14"
+readme = "README.md"
+requires-python = ">=3.15"
 dependencies = [
-    "fastapi>=0.135.1",
+    "fastapi>=0.143.0",
     "httpx>=0.28.1",
-    "lxml>=6.0.2",
-    "pydantic-settings>=2.13.1",
-    "python-dotenv>=1.2.2",
-    "uvicorn>=0.42.0",
+    "lxml>=6.1.3",
+    "pydantic-settings>=2.15.0",
+    "python-dotenv>=1.2.4",
+    "uvicorn>=0.54.0",
 ]
+
+# uv checks its own version against this before every command, whatever
+# installed it (system package, mise, CI action, the uv image in Dockerfile).
+[tool.uv]
+required-version = ">=0.13"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
@@ -24,8 +30,100 @@ tag_format = "v$version"
 
 [dependency-groups]
 dev = [
-    "pre-commit>=4.2.0",
-    "pytest>=9.0.2",
-    "pytest-asyncio>=1.3.0",
-    "ty>=0.0.24",
+    "prek>=0.5.5",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "pytest-socket>=0.8.1",
+    "ruff>=0.17.0",
+    "ty>=0.0.86",
+    "types-lxml>=2026.2.16",
+]
+
+[tool.ruff]
+target-version = "py315"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",      # pycodestyle
+    "F",           # pyflakes
+    "I",           # isort
+    "N",           # pep8-naming
+    "UP",          # pyupgrade
+    "B",           # bugbear
+    "A",           # builtins shadow
+    "C4",          # comprehensions
+    "PTH",         # use pathlib, not os.path
+    "SIM",         # simplify
+    "RET",         # return statements
+    "TC",          # type-checking imports
+    "ANN",         # missing annotations
+    "ASYNC",       # async pitfalls
+    "S",           # bandit (security)
+    "FURB",        # refurb
+    "PERF",        # perf anti-patterns
+    "RUF",         # ruff-specific
+]
+ignore = [
+    "ANN401",      # Allow `Any` when it's genuinely needed
+    "S101",        # assert in tests is fine
+]
+
+[tool.ruff.lint.flake8-type-checking]
+# pydantic evaluates field annotations at runtime, so their imports must stay.
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["ANN", "S101", "S105", "S106"]
+
+[tool.ty.environment]
+python-version = "3.15"
+python = ".venv"
+
+[tool.ty.src]
+include = ["src", "tests"]
+
+[tool.ty.rules]
+possibly-unresolved-reference = "error"
+possibly-missing-attribute = "error"
+possibly-missing-import = "error"
+unused-ignore-comment = "warn"
+
+[tool.pytest]
+minversion = "9.0"
+testpaths = ["tests"]
+# strict enables strict_config, strict_markers, strict_xfail, and
+# strict_parametrization_ids. An unexpected XPASS fails the run.
+strict = true
+addopts = [
+    "-ra",
+    "--cov",
+    "--cov-report=term-missing",
+    # pytest-socket: block network by default. Unix sockets stay open for the
+    # asyncio event loop. Opt in per test with the enable_socket marker.
+    "--disable-socket",
+    "--allow-unix-socket",
+]
+markers = [
+    "integration: requires external services",
+    "slow: slow tests",
+    "enable_socket: allow network access for this test",
+    "allow_hosts: restrict network access to specific hosts",
+]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+parallel = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+precision = 1
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
 ]

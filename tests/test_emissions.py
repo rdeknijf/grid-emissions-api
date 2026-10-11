@@ -1,6 +1,6 @@
 """Tests for emissions intensity calculation."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from grid_emissions_api.emissions import calculate_intensity
@@ -92,7 +92,7 @@ def test_is_estimated_default_false():
 def test_intensity_with_only_renewables():
     """Pure wind generation should give very low intensity."""
     gen = {
-        datetime(2026, 1, 1, 0, tzinfo=timezone.utc): {"B18": 5000},
+        datetime(2026, 1, 1, 0, tzinfo=UTC): {"B18": 5000},
     }
     result = calculate_intensity(gen)
     assert len(result) == 1
@@ -102,7 +102,7 @@ def test_intensity_with_only_renewables():
 def test_intensity_with_only_coal():
     """Pure coal should give high intensity."""
     gen = {
-        datetime(2026, 1, 1, 0, tzinfo=timezone.utc): {"B02": 1000},
+        datetime(2026, 1, 1, 0, tzinfo=UTC): {"B02": 1000},
     }
     result = calculate_intensity(gen)
     assert result[0].intensity == 820.0
@@ -111,7 +111,7 @@ def test_intensity_with_only_coal():
 def test_unknown_psr_code_uses_conservative_default():
     """Unknown fuel types should use 500 gCO2/kWh default."""
     gen = {
-        datetime(2026, 1, 1, 0, tzinfo=timezone.utc): {"B99": 1000},
+        datetime(2026, 1, 1, 0, tzinfo=UTC): {"B99": 1000},
     }
     result = calculate_intensity(gen)
     assert result[0].intensity == 500.0

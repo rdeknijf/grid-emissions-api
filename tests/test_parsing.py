@@ -1,6 +1,6 @@
 """Tests for ENTSO-E XML parsing."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from grid_emissions_api.entsoe_client import _parse_generation_xml
@@ -24,7 +24,7 @@ def test_parse_timestamps_are_utc():
 def test_parse_first_hour_has_all_fuel_types():
     xml = SAMPLE_XML.read_bytes()
     result = _parse_generation_xml(xml)
-    first_hour = datetime(2026, 3, 18, 23, 0, tzinfo=timezone.utc)
+    first_hour = datetime(2026, 3, 18, 23, 0, tzinfo=UTC)
     gen = result[first_hour]
     assert "B18" in gen  # wind onshore
     assert "B04" in gen  # gas CCGT
@@ -35,7 +35,7 @@ def test_parse_first_hour_has_all_fuel_types():
 def test_parse_mw_values_correct():
     xml = SAMPLE_XML.read_bytes()
     result = _parse_generation_xml(xml)
-    first_hour = datetime(2026, 3, 18, 23, 0, tzinfo=timezone.utc)
+    first_hour = datetime(2026, 3, 18, 23, 0, tzinfo=UTC)
     gen = result[first_hour]
     assert gen["B18"] == 3000  # wind
     assert gen["B04"] == 5000  # gas
@@ -46,7 +46,7 @@ def test_parse_mw_values_correct():
 def test_parse_hour_2_values():
     xml = SAMPLE_XML.read_bytes()
     result = _parse_generation_xml(xml)
-    hour_2 = datetime(2026, 3, 19, 0, 0, tzinfo=timezone.utc)
+    hour_2 = datetime(2026, 3, 19, 0, 0, tzinfo=UTC)
     gen = result[hour_2]
     assert gen["B18"] == 3200
     assert gen["B04"] == 4800
@@ -103,5 +103,5 @@ def test_subhourly_points_averaged_by_mean():
     # arithmetic mean (sum / n), not an order-dependent running pairwise mean.
     xml = _subhourly_xml([100, 200, 300, 400])
     result = _parse_generation_xml(xml)
-    hour = datetime(2026, 3, 19, 0, 0, tzinfo=timezone.utc)
+    hour = datetime(2026, 3, 19, 0, 0, tzinfo=UTC)
     assert result[hour]["B04"] == 250  # mean, not 312.5 (pairwise)

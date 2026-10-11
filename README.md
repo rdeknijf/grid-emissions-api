@@ -90,10 +90,10 @@ uv run pytest -v
 uv run python -m grid_emissions_api.ingest --backfill --start 2020-01-01
 ```
 
-Pre-commit hooks are configured for linting (ruff), formatting (ruff-format), and type checking (ty).
+Git hooks run through [prek](https://github.com/j178/prek): ruff (lint and format) and ty on commit, a quick pytest run on push.
 
 ```bash
-pre-commit install
+uv run prek install
 ```
 
 ## License

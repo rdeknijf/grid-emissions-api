@@ -1,9 +1,12 @@
 """Calculate emissions intensity from generation mix data."""
 
-from collections.abc import Mapping
-from datetime import datetime
+from typing import TYPE_CHECKING
 
 from .models import EMISSION_FACTORS, PSR_NAMES, IntensityDataPoint
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from datetime import datetime
 
 
 def calculate_intensity(

@@ -2,7 +2,6 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-
 # -- ENTSO-E bidding zones for all EU-27 countries --
 
 BIDDING_ZONES: dict[str, dict] = {
