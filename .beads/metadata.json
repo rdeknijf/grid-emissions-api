@@ -4,6 +4,7 @@
   "dolt_mode": "server",
   "dolt_database": "grid",
   "project_id": "ab894415-b8ad-49d7-90aa-5a5a6842faa9",
-  "global_dolt_database": "beads_global",
-  "global_project_id": "00000000-0000-0000-0000-000000000000"
+  "dolt_server_host": "beads.deknijf.com",
+  "dolt_server_user": "bd",
+  "dolt_server_tls": true
 }

@@ -65,6 +65,9 @@
 # - linear.api_key  → use LINEAR_API_KEY env var instead
 # - github.token    → use GITHUB_TOKEN env var instead
 
-sync.remote: "git+https://github.com/rdeknijf/grid-emissions-api.git"
-dolt:
-    shared-server: true
+# Off since 2026-10-09: beads live on beads.deknijf.com (erebor), not in git refs/dolt/data.
+# sync.remote: "git+https://github.com/rdeknijf/grid-emissions-api.git"
+
+# Port of the shared beads server on erebor (sq-8fak). Here, not in metadata.json,
+# where bd 1.3 deprecates dolt_server_port and warns on every call.
+dolt.port: 3306
