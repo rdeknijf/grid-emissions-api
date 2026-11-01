@@ -8,13 +8,14 @@ A free, open API that serves hourly electricity grid emissions intensity (gCO2eq
 
 ## Last Run
 
-2026-11-01: dependency refresh (Python 3.15 image, FastAPI 0.162, Starlette 1.10, GitHub Actions, prek hooks) and an ENTSO-E parser fix. The parser now fills A03 curves forward, skips consumption series, and drops the incomplete trailing hour.
+2026-11-01: PR #11 (dependency refresh and ENTSO-E parser fix) merged as `df4ff0a` and deployed through square PR #1021. The parser fills A03 curves forward, skips consumption series, and drops the incomplete trailing hour. A follow-up raises the lag limit for that cut from 1 to 3 hours, because the 08:28 run stored DE 07:00 at 686.9 gCO2eq/kWh from 7 fuel types.
 
 ## Current State
 
-- Verified 2026-11-01: `GET https://grid.deknijf.com/healthz` returns `{"status":"ok"}`. `GET /v1/intensity/latest?country=NL` at 07:50 UTC returns 06:00 UTC, so the hourly ingest is current for most zones.
-- Verified 2026-11-01: the cluster runs image `ghcr.io/rdeknijf/grid-emissions:b7fbd05c4f0f555279a00dcaa1db937c50f40c02` (main before the refresh) in namespace `grid-emissions`. CronJob `grid-emissions-ingest` runs at minute 5 of every hour with `--hours 3`.
-- Known data gaps (2026-11-01): BG has no data after 2026-10-01T07:00Z, because ENTSO-E publishes BG about 4 to 5 hours late and the 3-hour ingest window never reaches it. MT returns no A75 data from ENTSO-E.
+- Verified 2026-11-01: the cluster runs image `ghcr.io/rdeknijf/grid-emissions:df4ff0ae60e07c5f74425dd85c0bb35f0598f7e1` in namespace `grid-emissions` since 08:28 UTC (Deployment and CronJob). CronJob `grid-emissions-ingest` runs at minute 5 of every hour with `--hours 8`.
+- Verified 2026-11-01: after the 08:28 UTC ingest run, NL 05:00 and 06:00 UTC read 447.8 and 443.7 gCO2eq/kWh live (436.8 and 426.9 with the old parser).
+- BG has data again: the 08:28 run stored 3 BG points, and BG now reaches 02:00 UTC. ENTSO-E publishes BG about 4 to 5 hours late, which the old 3-hour window never reached. BG has no rows from 2026-10-01T08:00Z to 2026-10-31T23:00Z (verified live); a backfill fills the gap.
+- MT returns no A75 data from ENTSO-E.
 - ENTSO-E sends A75 as curveType A03 and adds a consumption series per fuel type for some zones. Rows ingested before the parser fix carry a skewed mix: for NL on 2026-10-31 the old parser read about 15 gCO2eq/kWh too low. The start date of the A03 format is not known. A backfill rewrites the rows.
 - Stack: Python 3.15, FastAPI, uv, ruff, ty, pytest, prek. Data comes from ENTSO-E, with IPCC AR6 emission factors. Storage is SQLite on a PVC.
 - CI: `.github/workflows/ci.yml` runs the prek hooks, pytest and `uv audit` on every pull request and push to `main`. `.github/workflows/build.yml` builds and pushes `ghcr.io/rdeknijf/grid-emissions:<commit sha>` on push to `main`.
@@ -25,7 +26,7 @@ A free, open API that serves hourly electricity grid emissions intensity (gCO2eq
 
 - Removed the gap-filling claim from the landing page instead of an implementation, because no interpolation code exists.
 - The backlog is beads; GitHub issues are the inbox and the public showcase. Push beads to GitHub only per epic or per issue with `scripts/bd-sync`.
-- The parser drops an hour that ends after the earliest end of a lagging series (one that ends within an hour of the latest series end), instead of serving a partial mix as the latest value.
+- The parser drops an hour that ends after the earliest end of a lagging series (one that ends at most 3 hours before the latest series end), instead of serving a partial mix as the latest value. Observed lag between fuel types in one zone is up to 75 minutes (DE, 2026-11-01); 3 hours stays below the 8-hour ingest window, so a series that really stops delays hours but does not lose them.
 
 ## Blockers
 
