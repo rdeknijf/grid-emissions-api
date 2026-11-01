@@ -1,12 +1,11 @@
-FROM debian:trixie-slim
+FROM python:3.15-slim-trixie
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# There is no official python:3.15-slim image yet (only release candidates),
-# so uv installs the Python that .python-version pins. /opt/python keeps it
-# readable for the non-root app user.
-ENV UV_PYTHON_INSTALL_DIR=/opt/python \
-    UV_PYTHON_PREFERENCE=only-managed
+# Use the image's own Python (it matches the .python-version pin), never a
+# uv-downloaded one.
+ENV UV_PYTHON_PREFERENCE=only-system \
+    UV_PYTHON_DOWNLOADS=never
 
 RUN useradd -m -u 1000 app
 
