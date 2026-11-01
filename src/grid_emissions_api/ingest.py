@@ -17,7 +17,7 @@ import httpx
 
 from .database import init_db, row_count, upsert_intensity
 from .emissions import calculate_intensity
-from .entsoe_client import fetch_generation
+from .entsoe_client import _MAX_SERIES_LAG, fetch_generation
 from .models import BIDDING_ZONES
 
 COUNTRIES = list(BIDDING_ZONES.keys())
@@ -60,6 +60,10 @@ async def backfill(start_date: datetime, end_date: datetime | None = None) -> No
     """Backfill historical data in 30-day chunks.
 
     ENTSO-E allows max ~1 year per request but returns faster with smaller ranges.
+    Each chunk after the first starts _MAX_SERIES_LAG before the previous chunk
+    end. The parser drops the last hours of a chunk when one series ends early
+    inside that window, so without the overlap those hours stay empty. The
+    upsert replaces rows, so the overlap is safe.
     """
     if end_date is None:
         end_date = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
@@ -77,7 +81,9 @@ async def backfill(start_date: datetime, end_date: datetime | None = None) -> No
             except Exception as e:
                 span = f"{chunk_start.date()} → {chunk_end.date()}"
                 print(f"  {span}: ERROR {_describe_error(e)}", file=sys.stderr)
-            chunk_start = chunk_end
+            if chunk_end >= end_date:
+                break
+            chunk_start = chunk_end - _MAX_SERIES_LAG
             await asyncio.sleep(0.5)  # be kind to ENTSO-E rate limits
         print(f"  Total: {total} points")
 
