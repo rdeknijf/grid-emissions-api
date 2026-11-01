@@ -4,7 +4,7 @@ Fetches Actual Generation Per Type (document type A75) and parses the XML
 response into structured generation data per hour.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import httpx
 from lxml import etree
@@ -59,8 +59,70 @@ async def fetch_generation(
     return _parse_generation_xml(resp.content)
 
 
+_RESOLUTION_MINUTES = {"PT15M": 15, "PT30M": 30, "PT60M": 60}
+
+
+def _period_points(period: etree._Element, curve_type: str) -> dict[int, float]:
+    """Return {position: quantity} for one Period, expanded per curve type.
+
+    A01 (sequential fixed size blocks) lists every position. A03 (variable
+    sized blocks) lists a point only where the value changes: the value holds
+    until the next listed position or the end of the period. ENTSO-E sends A75
+    as A03, so a constant series (flat nuclear, zero solar at night) comes as
+    a single point and must be filled forward to the period end.
+    """
+    points: dict[int, float] = {}
+    for point in period.findall("ns:Point", NS):
+        pos_el = point.find("ns:position", NS)
+        qty_el = point.find("ns:quantity", NS)
+        if pos_el is None or pos_el.text is None:
+            continue
+        if qty_el is None or qty_el.text is None:
+            continue
+        points[int(pos_el.text)] = float(qty_el.text)
+
+    if curve_type != "A03" or not points:
+        return points
+
+    start_el = period.find("ns:timeInterval/ns:start", NS)
+    end_el = period.find("ns:timeInterval/ns:end", NS)
+    resolution_el = period.find("ns:resolution", NS)
+    if (
+        start_el is None
+        or start_el.text is None
+        or end_el is None
+        or end_el.text is None
+        or resolution_el is None
+        or resolution_el.text not in _RESOLUTION_MINUTES
+    ):
+        return points
+    span = datetime.fromisoformat(end_el.text) - datetime.fromisoformat(start_el.text)
+    n_positions = int(span / timedelta(minutes=_RESOLUTION_MINUTES[resolution_el.text]))
+
+    filled: dict[int, float] = {}
+    value: float | None = None
+    for position in range(1, n_positions + 1):
+        value = points.get(position, value)
+        if value is not None:
+            filled[position] = value
+    return filled
+
+
 def _parse_generation_xml(xml_bytes: bytes) -> dict[datetime, dict[str, float]]:
-    """Parse ENTSO-E A75 XML into {timestamp: {psr_code: mw}}."""
+    """Parse ENTSO-E A75 XML into {timestamp: {psr_code: mw}}.
+
+    Only generation series count. A75 also carries consumption series (pumped
+    storage pumping, and per fuel type for some zones), marked by
+    outBiddingZone_Domain instead of inBiddingZone_Domain; those are skipped.
+
+    Upstream fills the most recent hour in gradually: one quarter of it, or
+    only some fuel types. A partial mix gives a wrong intensity, so hours that
+    end after the earliest lagging series end are dropped. The next ingest run
+    picks such an hour up once every series reaches past it. A series counts
+    as lagging when it ends within an hour of the latest series end. One that
+    ends earlier, or starts late, is a fuel type that is off (pumped storage
+    that generates only part of the day), not missing data.
+    """
     root = etree.fromstring(xml_bytes, parser=_SAFE_PARSER)
 
     # Accumulate running sums and counts per (hour, psr_code) so that
@@ -69,14 +131,23 @@ def _parse_generation_xml(xml_bytes: bytes) -> dict[datetime, dict[str, float]]:
     # the later points), so we defer the division until all points are seen.
     sums: dict[datetime, dict[str, float]] = {}
     counts: dict[datetime, dict[str, int]] = {}
+    # The end of data of each generation series (see docstring).
+    series_ends: list[datetime] = []
 
     for ts in root.findall(".//ns:TimeSeries", NS):
+        if ts.find("ns:outBiddingZone_Domain.mRID", NS) is not None:
+            continue  # consumption, not generation
+
         # Get the PSR type (fuel type)
         psr_el = ts.find(".//ns:MktPSRType/ns:psrType", NS)
         if psr_el is None or psr_el.text is None:
             continue
         psr_code = psr_el.text
+        curve_el = ts.find("ns:curveType", NS)
+        # No curveType element means A01 (ENTSO-E curve type guide).
+        curve_type = curve_el.text if curve_el is not None and curve_el.text else "A01"
 
+        series_end: datetime | None = None
         for period in ts.findall(".//ns:Period", NS):
             start_el = period.find("ns:timeInterval/ns:start", NS)
             resolution_el = period.find("ns:resolution", NS)
@@ -84,52 +155,41 @@ def _parse_generation_xml(xml_bytes: bytes) -> dict[datetime, dict[str, float]]:
                 continue
 
             period_start = datetime.fromisoformat(start_el.text)
-            # Parse resolution (PT15M or PT60M)
-            resolution_str = resolution_el.text  # e.g. "PT60M" or "PT15M"
-            if resolution_str == "PT60M":
-                resolution_minutes = 60
-            elif resolution_str == "PT15M":
-                resolution_minutes = 15
-            elif resolution_str == "PT30M":
-                resolution_minutes = 30
-            else:
-                resolution_minutes = 60
+            resolution_minutes = _RESOLUTION_MINUTES.get(resolution_el.text or "", 60)
 
-            for point in period.findall("ns:Point", NS):
-                pos_el = point.find("ns:position", NS)
-                qty_el = point.find("ns:quantity", NS)
-                if (
-                    pos_el is None
-                    or pos_el.text is None
-                    or qty_el is None
-                    or qty_el.text is None
-                ):
-                    continue
+            points = _period_points(period, curve_type)
+            end_el = period.find("ns:timeInterval/ns:end", NS)
+            if points and end_el is not None and end_el.text is not None:
+                period_end = datetime.fromisoformat(end_el.text)
+                series_end = max(series_end or period_end, period_end)
 
-                position = int(pos_el.text)
-                quantity = float(qty_el.text)
-
-                # Calculate timestamp from period start + position
-                from datetime import timedelta
-
+            for position, quantity in points.items():
                 ts_point = period_start + timedelta(
                     minutes=(position - 1) * resolution_minutes
                 )
-
-                # If sub-hourly, round down to hour for aggregation
-                if resolution_minutes < 60:
-                    ts_point = ts_point.replace(minute=0, second=0, microsecond=0)
+                # Round down to the hour for aggregation.
+                ts_point = ts_point.replace(minute=0, second=0, microsecond=0)
 
                 hour_sums = sums.setdefault(ts_point, {})
                 hour_counts = counts.setdefault(ts_point, {})
                 hour_sums[psr_code] = hour_sums.get(psr_code, 0.0) + quantity
                 hour_counts[psr_code] = hour_counts.get(psr_code, 0) + 1
 
-    # Divide accumulated sums by their counts to get the hourly mean.
+        if series_end is not None:
+            series_ends.append(series_end)
+
+    data_end: datetime | None = None
+    if series_ends:
+        latest = max(series_ends)
+        data_end = min(e for e in series_ends if e >= latest - timedelta(hours=1))
+
+    # Divide accumulated sums by their counts to get the hourly mean, and
+    # keep only hours that end at or before data_end.
     return {
         ts_point: {
             psr_code: total / counts[ts_point][psr_code]
             for psr_code, total in hour_sums.items()
         }
         for ts_point, hour_sums in sums.items()
+        if data_end is None or ts_point + timedelta(hours=1) <= data_end
     }

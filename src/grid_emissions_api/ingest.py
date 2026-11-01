@@ -13,12 +13,26 @@ import asyncio
 import sys
 from datetime import UTC, datetime, timedelta
 
+import httpx
+
 from .database import init_db, row_count, upsert_intensity
 from .emissions import calculate_intensity
 from .entsoe_client import fetch_generation
 from .models import BIDDING_ZONES
 
 COUNTRIES = list(BIDDING_ZONES.keys())
+
+
+def _describe_error(e: Exception) -> str:
+    """Describe a failed fetch for the log, without the request URL.
+
+    httpx puts the full URL in an HTTPStatusError message, and the ENTSO-E URL
+    carries the securityToken. Some errors (timeouts) have an empty message,
+    so the exception type is always included.
+    """
+    if isinstance(e, httpx.HTTPStatusError):
+        return f"{type(e).__name__}: HTTP {e.response.status_code}"
+    return f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
 
 
 async def ingest_range(country: str, start: datetime, end: datetime) -> int:
@@ -39,7 +53,7 @@ async def ingest_recent(hours: int = 48) -> None:
             n = await ingest_range(country, start, end)
             print(f"  {country}: {n} data points")
         except Exception as e:
-            print(f"  {country}: ERROR {e}", file=sys.stderr)
+            print(f"  {country}: ERROR {_describe_error(e)}", file=sys.stderr)
 
 
 async def backfill(start_date: datetime, end_date: datetime | None = None) -> None:
@@ -61,10 +75,8 @@ async def backfill(start_date: datetime, end_date: datetime | None = None) -> No
                 total += n
                 print(f"  {chunk_start.date()} → {chunk_end.date()}: {n} points")
             except Exception as e:
-                print(
-                    f"  {chunk_start.date()} → {chunk_end.date()}: ERROR {e}",
-                    file=sys.stderr,
-                )
+                span = f"{chunk_start.date()} → {chunk_end.date()}"
+                print(f"  {span}: ERROR {_describe_error(e)}", file=sys.stderr)
             chunk_start = chunk_end
             await asyncio.sleep(0.5)  # be kind to ENTSO-E rate limits
         print(f"  Total: {total} points")
