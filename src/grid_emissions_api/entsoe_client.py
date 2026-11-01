@@ -62,6 +62,17 @@ async def fetch_generation(
 _RESOLUTION_MINUTES = {"PT15M": 15, "PT30M": 30, "PT60M": 60}
 
 
+# How far a generation series may end behind the latest one and still count
+# as lagging (its newest data is not published yet) rather than stopped. DE on
+# 2026-11-01 had seven fuel types 75 minutes behind the other nine; a 1-hour
+# limit took them as stopped and stored a 7-fuel mix at about 700 gCO2eq/kWh.
+# In full-day responses (AT, ES, PT, SK, 2026-10-30) no series stopped early:
+# a fuel type that is off reports zeros to the end. The limit stays below the
+# hourly ingest window (8 hours), so if a series ever does stop, the hours
+# after it are delayed by at most 3 hours, not lost.
+_MAX_SERIES_LAG = timedelta(hours=3)
+
+
 def _period_points(period: etree._Element, curve_type: str) -> dict[int, float]:
     """Return {position: quantity} for one Period, expanded per curve type.
 
@@ -119,9 +130,10 @@ def _parse_generation_xml(xml_bytes: bytes) -> dict[datetime, dict[str, float]]:
     only some fuel types. A partial mix gives a wrong intensity, so hours that
     end after the earliest lagging series end are dropped. The next ingest run
     picks such an hour up once every series reaches past it. A series counts
-    as lagging when it ends within an hour of the latest series end. One that
-    ends earlier, or starts late, is a fuel type that is off (pumped storage
-    that generates only part of the day), not missing data.
+    as lagging when it ends at most _MAX_SERIES_LAG before the latest series
+    end; only a series further behind is taken as stopped. A series that
+    starts late (pumped storage that generates only part of the day) never
+    cuts the window.
     """
     root = etree.fromstring(xml_bytes, parser=_SAFE_PARSER)
 
@@ -181,7 +193,7 @@ def _parse_generation_xml(xml_bytes: bytes) -> dict[datetime, dict[str, float]]:
     data_end: datetime | None = None
     if series_ends:
         latest = max(series_ends)
-        data_end = min(e for e in series_ends if e >= latest - timedelta(hours=1))
+        data_end = min(e for e in series_ends if e >= latest - _MAX_SERIES_LAG)
 
     # Divide accumulated sums by their counts to get the hourly mean, and
     # keep only hours that end at or before data_end.
