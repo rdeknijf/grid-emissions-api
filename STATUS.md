@@ -8,11 +8,11 @@ A free, open API that serves hourly electricity grid emissions intensity (gCO2eq
 
 ## Last Run
 
-2026-11-01: PR #11 (dependency refresh and ENTSO-E parser fix) merged as `df4ff0a` and deployed through square PR #1021. The parser fills A03 curves forward, skips consumption series, and drops the incomplete trailing hour. A follow-up raises the lag limit for that cut from 1 to 3 hours, because the 08:28 run stored DE 07:00 at 686.9 gCO2eq/kWh from 7 fuel types.
+2026-11-01: PR #11 (dependency refresh and ENTSO-E parser fix) merged as `df4ff0a` and deployed through square PR #1021. The parser fills A03 curves forward, skips consumption series, and drops the incomplete trailing hour. PR #12 (merged as `c58b0bc`, deployed through square PR #1022) raises the lag limit for that cut from 1 to 3 hours, because the 08:28 run stored DE 07:00 at 686.9 gCO2eq/kWh from 7 fuel types. After the 09:05 UTC run, DE 07:00 reads 433.5 from 16 fuel types.
 
 ## Current State
 
-- Verified 2026-11-01: the cluster runs image `ghcr.io/rdeknijf/grid-emissions:df4ff0ae60e07c5f74425dd85c0bb35f0598f7e1` in namespace `grid-emissions` since 08:28 UTC (Deployment and CronJob). CronJob `grid-emissions-ingest` runs at minute 5 of every hour with `--hours 8`.
+- Verified 2026-11-01: the cluster runs image `ghcr.io/rdeknijf/grid-emissions:c58b0bc7b3e3dc6125dc53dc39c1c91230dfbab7` in namespace `grid-emissions` since about 08:45 UTC (Deployment and CronJob). Later docs-only merges build new image tags; square keeps the pin at `c58b0bc` on purpose until code changes. CronJob `grid-emissions-ingest` runs at minute 5 of every hour with `--hours 8`.
 - Verified 2026-11-01: after the 08:28 UTC ingest run, NL 05:00 and 06:00 UTC read 447.8 and 443.7 gCO2eq/kWh live (436.8 and 426.9 with the old parser).
 - BG has data again: the 08:28 run stored 3 BG points, and BG now reaches 02:00 UTC. ENTSO-E publishes BG about 4 to 5 hours late, which the old 3-hour window never reached. BG has no rows from 2026-10-01T08:00Z to 2026-10-31T23:00Z (verified live); a backfill fills the gap.
 - MT returns no A75 data from ENTSO-E.
