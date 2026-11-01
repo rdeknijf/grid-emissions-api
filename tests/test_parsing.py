@@ -115,6 +115,12 @@ def test_subhourly_points_averaged_by_mean():
 # last hour.
 NL_A03_XML = Path(__file__).parent / "entsoe_a75_nl_2026-11-01.xml"
 
+# A real A75 response for DE, 2026-11-01 00:00-08:00 UTC, fetched at 08:34.
+# Seven series (B01, B04, B11, B12, B16, B17, B19) ended at 07:30 then; in the
+# fixture they are cut back to 06:45, the shape the 08:28 ingest run saw: nine
+# series reach 08:00 and seven lag 75 minutes behind.
+DE_LAG_XML = Path(__file__).parent / "entsoe_a75_de_2026-11-01_lag.xml"
+
 
 def _series(psr: str, points: dict[int, float], *, domain: str = "in") -> str:
     point_xml = "".join(
@@ -197,16 +203,16 @@ def test_series_that_starts_late_keeps_the_earlier_hours():
 
 
 def test_series_that_stops_early_keeps_the_later_hours():
-    # Pumped storage (B10) stops generating at 00:30, long before the other
-    # series end at 03:00. That is a fuel type that is off, not lag.
+    # B10 ends at 00:30, more than _MAX_SERIES_LAG before the other series
+    # end at 05:00. That is taken as a stop, not lag, so it cuts nothing.
     result = _parse_generation_xml(
         _doc(
-            _series("B04", {1: 100}).replace("02:00Z</end>", "03:00Z</end>"),
+            _series("B04", {1: 100}).replace("02:00Z</end>", "05:00Z</end>"),
             _series("B10", {1: 50}).replace("02:00Z</end>", "00:30Z</end>"),
         )
     )
     assert sorted(result) == [
-        datetime(2026, 3, 19, hour, 0, tzinfo=UTC) for hour in (0, 1, 2)
+        datetime(2026, 3, 19, hour, 0, tzinfo=UTC) for hour in range(5)
     ]
 
 
@@ -235,3 +241,21 @@ def test_real_nl_response_intensity():
     # plus a 426.7 for 07:00 built from a single quarter.
     data = calculate_intensity(_parse_generation_xml(NL_A03_XML.read_bytes()))
     assert [p.intensity for p in data] == [447.8, 443.7]
+
+
+def test_series_lagging_more_than_an_hour_still_cuts_the_window():
+    result = _parse_generation_xml(
+        _doc(
+            _series("B04", {1: 100}).replace("02:00Z</end>", "03:00Z</end>"),
+            _series("B14", {1: 480}).replace("02:00Z</end>", "01:45Z</end>"),
+        )
+    )
+    assert sorted(result) == [datetime(2026, 3, 19, 0, 0, tzinfo=UTC)]
+
+
+def test_real_de_response_with_lagging_fuel_types():
+    # The seven lagging series end at 06:45, so 06:00 and 07:00 are partial.
+    # The old 1-hour limit returned 07:00 at 718.6 gCO2eq/kWh from 9 series.
+    result = _parse_generation_xml(DE_LAG_XML.read_bytes())
+    assert max(result) == datetime(2026, 11, 1, 5, 0, tzinfo=UTC)
+    assert len(result[datetime(2026, 11, 1, 5, 0, tzinfo=UTC)]) == 16
